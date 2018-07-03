@@ -106,3 +106,10 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# vim
+*.swp
+*.swo
+
+# OSX
+.DS_Store
