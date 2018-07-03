@@ -4,66 +4,66 @@
 
 """
 import unittest
-
 import sys
-
-try:
-    # python 3.4+ should use builtin unittest.mock not mock package
-    from unittest.mock import patch
-except ImportError:
-    from mock import patch
-
+from unittest.mock import patch
 from benchmark import cli
 
-class TestStringMethods(unittest.TestCase):
+class TestCommandLineInterface(unittest.TestCase):
 
-    def test_getting_arguments(self):
-        """ Look for default values for config """
-        testargs = ["prog", "--fetch_data", "--label", "my_run"]
+
+    def run_subparser_test(self,subparser_cmd,parameter,expected, default_key=None, default_value=None):  
+        """ Tests subparsers for missing arguments and default values. """
+        testargs = ["prog", subparser_cmd, "--"+parameter, expected]
         with patch.object(sys, 'argv', testargs):
-        #Test here if it is getting all the right things
             args = cli.get_cli_arguments()
-            self.assertEqual(args.config,"../doc/benchmark.conf")
-            self.assertTrue(args.fetch_data)
-            self.assertEqual(args.label,"my_run")   
+            self.assertEqual(args[parameter],expected, 
+                subparser_cmd + " subparser did not parse right config file arg.")
+            self.assertEqual(args["command"],subparser_cmd,  subparser_cmd + " command was not interpreted properly")
+            if default_key:
+               self.assertEqual(args[default_key],default_value, 
+                subparser_cmd + " command parser did not setup the right default key " + default_key + 
+                " to " + default_value )
 
+
+    def test_getting_command_arguments(self):
+        """ Tests for reading args and storing values for running all benchmark options from the command line."""
+        # Test group 1 -- config
+        self.run_subparser_test("config","output_config","./benchmark.conf")
+        # Test group 2 -- setup
+        self.run_subparser_test("setup","config_file","./benhcmark.conf")  
+        # Test group 3 - Tests if it the argparser is setting default values """
+        self.run_subparser_test("exec","config_file","./benchmark.conf")  
+        # Test group 4 - Tests if it the argparser is setting default values """
+        self.run_subparser_test("exec","config_file","./benchmark.conf","label","run")    
+
+
+    def test_parser_expected_failing(self):
+        """ Test that parsing fails on no command option (a choice of a subparser), or an unrecognized command ("something") """
         testargs = ["prog"]
+        command_line_error_code = 2
         with patch.object(sys, 'argv', testargs):
-        #Test here if it is fetching all the things by default
-            args = cli.get_cli_arguments()
-            self.assertEqual(args.config,"../doc/benchmark.conf")
-            self.assertFalse(args.fetch_data)
-            self.assertEqual(args.label,"run")   
-
-    def test_wrong_argument(self):
-        """ test that parsing fails on a wrong argument name """
-        testargs = ["prog","something"]
-        with patch.object(sys, 'argv', testargs):
-            try:
+            with self.assertRaises( SystemExit ) as cm: 
                 cli.get_cli_arguments()
-            except SystemExit:
-                pass
-            else:
-                self.fail("It was supposed to fail on the wrong argument (something)")
+                self.assertEqual(cm.exception.code, command_line_error_code, 
+                    "CLI handler was supposed to fail on the missing command line argument.")
 
-    def test_parsing_arguments(self):
-        testargs = ["prog", "--fetch_data", "--label", "run","--config","doc/benchmark.conf"]
+        testargs = ["prog","something"]
+        command_line_error_code = 2
         with patch.object(sys, 'argv', testargs):
-            args = cli.get_cli_arguments()
-            runtime_configuration = cli.parse_arguments(args)
-            self.assertEqual(runtime_configuration["label"],"run", "Should have had run in it.")
-            self.assertTrue(runtime_configuration["fetch_data"],"run", "Should have had run in it.")
-            self.assertExists(runtime_configuration[""])
+            with self.assertRaises( SystemExit ) as cm: 
+                cli.get_cli_arguments()
+                self.assertEqual(cm.exception.code, command_line_error_code, 
+                    "CLI handler was supposed to fail on the wrong command line argument.")
 
 
     def test_reading_runtime_configuration(self):
         """ Tests that we can read values from the benchmark.conf and into a proper data structure. """
-        testargs = ["prog"]
+        testargs = ["prog","exec","--config_file","doc/benchmark.conf"]
         with patch.object(sys, 'argv', testargs):
             args = cli.get_cli_arguments()
-            runtime_configuration = cli.parse_arguments(args)
-            runtime_configuration.update( cli.read_configuration(location=runtime_configuration["config"]) )
-            self.assertTrue(runtime_configuration["output_results"] is not None, "Should have output configuration in it.")
+            runtime_configuration = cli.read_configuration(location=args["config_file"])
+            self.assertEqual(runtime_configuration.output_results, "~/benchmark/results.psv", 
+                "Runtime configuration did not have the right output file.")
 
 if __name__ == '__main__':
     unittest.main()

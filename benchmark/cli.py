@@ -3,11 +3,27 @@ determines the runtime mode (dynamic vs. static); if dynamic, gets the benchmark
 runs the benchmarks, and records the timer results. """
 
 import argparse # for command line parsing
-import ConfigParser # for config file parsing
 import time # for benchmark timer
 import csv # for writing results
 import logging
 
+from configparser import ConfigParser
+
+# Important -- use to dereference sections
+section_names = 'output', 'ftp'
+
+class ConfigurationRepresentation(object):
+  """ A small utility class for object representation of a standard config. file. Requires list of section names. """
+
+    def __init__(self, file_name):
+      """ Initializes the configuration representation with a supplied file. """
+        parser = ConfigParser()
+        parser.optionxform = str  # make option names case sensitive
+        found = parser.read(file_name)
+        if not found:
+            raise ValueError("Configuration file {0} not found".format(file_name) )
+        for name in section_names:
+            self.__dict__.update(parser.items(name))  # create dictionary representation  
 
 def get_cli_arguments():
     """ Returns command line arguments. 
@@ -15,49 +31,43 @@ def get_cli_arguments():
     Returns:
     args object from an ArgumentParses for fetch data (boolean, from a server), label (optional, for naming the benchmark run), 
     and config argument for where is the config file. """
-
+    
     logging.debug('Getting cli arguments')
 
     parser = argparse.ArgumentParser(description="A benchmark for genomics routines in Python.")
 
-    parser.add_argument("-f","--fetch_data", action='store_true', help="Run statically (do not download any file.)")
-    parser.add_argument("-l","--label", type=str, default="run", metavar="RUN_LABEL", help="Label for the benchmark run.")
-    #parser.add_argument("-c","--config", type=file, help="Specify the path to a configuration file.", metavar="FILEPATH")
-    parser.add_argument("-c", "--config", type=str, default="../doc/benchmark.conf",
-  	help="Specify the path to a configuration file.", metavar="FILEPATH")
+    # Enable three exclusive groups of options (using subparsers)
+    # https://stackoverflow.com/questions/17909294/python-argparse-mutual-exclusive-group/17909525
 
-    return parser.parse_args()
+    subparser = parser.add_subparsers(title="commands", dest="command") 
+    subparser.required = True
 
-def parse_arguments(args):
-  """ Parses command line arguments, used to control the behavior of the benchmark including location of the configuration files, 
-  outputs, etc.
-  Args:
+    config_parser = subparser.add_parser("config",
+      help='Setting up the default configuration of the benchmark. It creates the default configuration file.')
+    config_parser.add_argument("--output_config", type=str, required=True, help="Specify the output path to a configuration file.", metavar="FILEPATH")
 
-  Returns:
-   a dictionary with parameters: 
-  """
-  logging.debug('Parsing arguments')
-  runtime_configuration = {"fetch_data":args.fetch_data}
-  runtime_configuration["label"] = args.label
-  runtime_configuration["config"] = args.config
-  return runtime_configuration
+    data_setup_parser = subparser.add_parser("setup",
+      help='Preparation and setting up of the data for the benchmark. It requires a configuration file.')
+    data_setup_parser.add_argument("--config_file", required=True, help="Location of the configuration file", metavar="FILEPATH")
 
 
-def read_configuration(location="../doc/benchmark.conf"):
-	""" Read the configuration file here, and store in a dictionary """
-	logging.debug('Reading configuration')
-	config = ConfigParser.SafeConfigParser()
-	config.read(location)
-	runtime_configuration = {"ftp_server":config.get('ftp', 'server')}
-	runtime_configuration["directory"] = config.get('ftp', 'directory')
-	runtime_configuration["files"] = config.get('ftp', 'files')
-	runtime_configuration["output_results"] = config.get('output', 'output_results')
-	return runtime_configuration
+    benchmark_exec_parser = subparser.add_parser("exec", 
+      help='Execution of the benchmark modes. It requires a configuration file.')
+    # TODO: use run_(timestamp) as default
+    benchmark_exec_parser.add_argument("--label", type=str, default="run", metavar="RUN_LABEL", help="Label for the benchmark run.")
+    benchmark_exec_parser.add_argument("--config_file", type=str,  required=True, help="Specify the path to a configuration file.", metavar="FILEPATH")
 
+    runtime_configuration = vars(parser.parse_args()) 
+    return runtime_configuration
+
+def read_configuration(location):
+    """
+    Args: location of the configuration file, existing configuration dictionary
+    Returns: a dictionary with keys of the form
+    <section>.<option> and the corresponding values.
+    """
+    config = ConfigurationRepresentation(location)
+    return config
 
 if __name__ == '__main__':
-	args = get_cli_arguments()
-	runtime_configuration = parse_arguments(args)
-    #TODO: get here truthiness of the flag fetch data and store 
-	runtime_configuration.update( read_configuration(location=runtime_configuration["config"]) )
-	print runtime_configuration
+    runtime_configuration = get_cli_arguments()
