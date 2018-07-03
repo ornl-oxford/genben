@@ -5,7 +5,7 @@ Benchmarking of systems for storage and compute over large-scale genomic data
 
 pip install genomics-benchmark
 
-genomics-benchmark [--dynamic] [--conf <file location>] [--results <file location>] [--averaging_runs n]
+genomics-benchmark {config --output_config FILEPATH | setup --config_file FILEPATH | exec --config_file FILEPATH [--label LABEL]}
 
 ## Benchmark Structure 
 
