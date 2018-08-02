@@ -27,3 +27,7 @@ def fetch_file_from_url(url, local_file):
 def decompress_gzip(local_file_gz, local_file):
 	with open(local_file, 'wb') as file_out, gzip.open(local_file_gz, 'rb') as file_in:
 		shutil.copyfileobj(file_in, file_out)
+		
+def convert_to_zarr(source_data,zarr_formatted_data):
+	""" This function converts the original data (vcf) to a zarr format. """
+	pass 
