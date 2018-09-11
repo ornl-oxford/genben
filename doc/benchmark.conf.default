@@ -1,0 +1,48 @@
+[run_mode]
+run_mode = fetch_data
+
+
+[ftp]
+
+# Whether or not the FTP downloader module should be used when running benchmark tool in Setup mode.
+enabled = False
+
+# FTP Server to retrieve files from:
+server = ftp.someserver.com
+
+# Username and password to login into FTP server with.
+# Leave both fields blank for anonymous login.
+username = 
+password = 
+
+# Determines whether to use TLS or non-secure FTP
+use_tls = False
+
+# Directory on {server} to download files from:
+directory = files
+
+# File or list of files to download within {directory}.
+#  - If downloading list of files, names should be separated using 
+#    delimiter specified in {file_delimiter}.
+#  - To download all files within {directory}, set {files} to "*" (without quotes).
+files = sample.vcf
+
+# If downloading multiple files, the delimiter that will be used for
+# separating multiple filenames.
+file_delimiter = |
+
+
+[data_conversion]
+
+# Specifies the format of data files.
+#  - Possible Options:
+#     - auto (attempt to automatically determine format from filename(s)
+#     - vcf (VCF-formatted text file)
+#     - vcf-gz (VCF-formatted text file located within a compressed gz container
+#     - zarr (Zarr-formatted dataset, in which case {files} is treated as directory
+#       names for each Zarr dataset
+format = vcf
+
+
+[output]
+output_results = ~/benchmark/results.psv

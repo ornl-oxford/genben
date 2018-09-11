@@ -15,4 +15,5 @@ dependencies:
 - numcodecs=0.5.5
 - zarr=2.2.0
 - scikit-allel=1.1.10
+- perf=1.5.1
 

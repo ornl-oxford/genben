@@ -1,6 +1,8 @@
 # custom ignores
 opt
 data
+testcfg.cfg
+.idea/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
