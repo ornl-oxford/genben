@@ -8,7 +8,7 @@ pip install genomics-benchmark
 Then:  
 
 1. Generate the initial, default configuration file:  
-$ genomics-benchmark config --output_config FILEPATH  
+$ genomics-benchmark config --output_config FILEPATH [-f]  
 and then edit the config.ini file for the benchmarking environment.  
 
 2. Setup the benchmark data and the benchmark environment:  

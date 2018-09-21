@@ -56,14 +56,5 @@ class TestCommandLineInterface(unittest.TestCase):
                     "CLI handler was supposed to fail on the wrong command line argument.")
 
 
-    def test_reading_runtime_configuration(self):
-        """ Tests that we can read values from the benchmark.conf and into a proper data structure. """
-        testargs = ["prog","exec","--config_file","doc/benchmark.conf"]
-        with patch.object(sys, 'argv', testargs):
-            args = cli.get_cli_arguments()
-            runtime_configuration = cli.read_configuration(location=args["config_file"])
-            self.assertEqual(runtime_configuration.output_results, "~/benchmark/results.psv", 
-                "Runtime configuration did not have the right output file.")
-
 if __name__ == '__main__':
     unittest.main()

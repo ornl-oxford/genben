@@ -2,28 +2,13 @@
 determines the runtime mode (dynamic vs. static); if dynamic, gets the benchmark data from the server,
 runs the benchmarks, and records the timer results. """
 
-import argparse # for command line parsing
-import time # for benchmark timer
-import csv # for writing results
+import argparse  # for command line parsing
+import time  # for benchmark timer
+import csv  # for writing results
 import logging
+import sys
+from benchmark import config, data_service
 
-from configparser import ConfigParser
-
-# Important -- use to dereference sections
-section_names = 'output', 'ftp'
-
-class ConfigurationRepresentation(object):
-  """ A small utility class for object representation of a standard config. file. Requires list of section names. """
-
-    def __init__(self, file_name):
-      """ Initializes the configuration representation with a supplied file. """
-        parser = ConfigParser()
-        parser.optionxform = str  # make option names case sensitive
-        found = parser.read(file_name)
-        if not found:
-            raise ValueError("Configuration file {0} not found".format(file_name) )
-        for name in section_names:
-            self.__dict__.update(parser.items(name))  # create dictionary representation  
 
 def get_cli_arguments():
     """ Returns command line arguments. 
@@ -45,6 +30,7 @@ def get_cli_arguments():
     config_parser = subparser.add_parser("config",
       help='Setting up the default configuration of the benchmark. It creates the default configuration file.')
     config_parser.add_argument("--output_config", type=str, required=True, help="Specify the output path to a configuration file.", metavar="FILEPATH")
+    config_parser.add_argument("-f", action="store_true", help="Overwrite the destination file if it already exists.")
 
     data_setup_parser = subparser.add_parser("setup",
       help='Preparation and setting up of the data for the benchmark. It requires a configuration file.')
@@ -60,14 +46,28 @@ def get_cli_arguments():
     runtime_configuration = vars(parser.parse_args()) 
     return runtime_configuration
 
-def read_configuration(location):
-    """
-    Args: location of the configuration file, existing configuration dictionary
-    Returns: a dictionary with keys of the form
-    <section>.<option> and the corresponding values.
-    """
-    config = ConfigurationRepresentation(location)
-    return config
 
-if __name__ == '__main__':
-    runtime_configuration = get_cli_arguments()
+def _main():
+    cli_arguments = get_cli_arguments()
+
+    command = cli_arguments["command"]
+    if command == "config":
+        output_config_location = cli_arguments["output_config"]
+        overwrite_mode = cli_arguments["f"]
+        config.generate_default_config_file(output_location=output_config_location,
+                                            overwrite=overwrite_mode)
+    elif command == "setup":
+        pass
+    elif command == "exec":
+        pass
+    else:
+        print("Error: Unexpected command specified. Exiting...")
+        sys.exit(1)
+
+
+def main():
+    try:
+        _main()
+    except KeyboardInterrupt:
+        print("Program interrupted. Exiting...")
+        sys.exit(1)
