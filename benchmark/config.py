@@ -27,6 +27,53 @@ class ConfigurationRepresentation(object):
             self.__dict__.update(dict_section)  # add section dictionary to root dictionary
 
 
+class FTPConfigurationRepresentation(object):
+    """ Utility class for object representation of FTP module configuration. """
+    enabled = False  # Specifies whether the FTP module should be enabled or not
+    server = ""  # FTP server to connect to
+    username = ""  # Username to login with. Set username and password to blank for anonymous login
+    password = ""  # Password to login with. Set username and password to blank for anonymous login
+    use_tls = False  # Whether the connection should use TLS encryption
+    directory = ""  # Directory on FTP server to download files from
+    files = []  # List of files within directory to download. Set to empty list to download all files within directory
+
+    def __init__(self, runtime_config):
+        """
+        Creates an object representation of FTP module configuration data.
+        :param runtime_config: runtime_config data to extract FTP settings from
+        :type runtime_config: ConfigurationRepresentation
+        """
+        if runtime_config is not None:
+            # Check if [ftp] section exists in config
+            if hasattr(runtime_config, "ftp"):
+                # Extract relevant settings from config file
+                if "enabled" in runtime_config.ftp:
+                    self.enabled = config_str_to_bool(runtime_config.ftp["enabled"])
+                if "server" in runtime_config.ftp:
+                    self.server = runtime_config.ftp["server"]
+                if "username" in runtime_config.ftp:
+                    self.username = runtime_config.ftp["username"]
+                if "password" in runtime_config.ftp:
+                    self.password = runtime_config.ftp["password"]
+                if "use_tls" in runtime_config.ftp:
+                    self.use_tls = config_str_to_bool(runtime_config.ftp["use_tls"])
+                if "directory" in runtime_config.ftp:
+                    self.directory = runtime_config.ftp["directory"]
+
+                # Convert delimited list of files (string) to Python-style list
+                if "file_delimiter" in runtime_config.ftp:
+                    delimiter = runtime_config.ftp["file_delimiter"]
+                else:
+                    delimiter = "|"
+
+                if "files" in runtime_config.ftp:
+                    files_str = str(runtime_config.ftp["files"])
+                    if files_str == "*":
+                        self.files = []
+                    else:
+                        self.files = files_str.split(delimiter)
+
+
 def read_configuration(location):
     """
     Args: location of the configuration file, existing configuration dictionary

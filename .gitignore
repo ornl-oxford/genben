@@ -1,6 +1,6 @@
 # custom ignores
 opt
-data
+/data/
 testcfg.cfg
 .idea/
 

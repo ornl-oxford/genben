@@ -57,7 +57,20 @@ def _main():
         config.generate_default_config_file(output_location=output_config_location,
                                             overwrite=overwrite_mode)
     elif command == "setup":
-        pass
+        print("[Setup] Setting up benchmark data.")
+
+        # Get runtime config from specified location
+        runtime_config = config.read_configuration(location=cli_arguments["config_file"])
+
+        # Get FTP module settings from runtime config
+        ftp_config = config.FTPConfigurationRepresentation(runtime_config)
+
+        if ftp_config.enabled:
+            print("[Setup][FTP] FTP module enabled. Running FTP download...")
+            data_service.fetch_data_via_ftp(ftp_config=ftp_config, local_directory="data/download")
+        else:
+            print("[Setup][FTP] FTP module disabled. Skipping FTP download...")
+
     elif command == "exec":
         pass
     else:
