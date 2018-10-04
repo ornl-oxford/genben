@@ -32,17 +32,37 @@ files = sample.vcf
 file_delimiter = |
 
 
-[data_conversion]
+[vcf_to_zarr]
 
-# Specifies the format of data files.
-#  - Possible Options:
-#     - auto (attempt to automatically determine format from filename(s)
-#     - vcf (VCF-formatted text file)
-#     - vcf-gz (VCF-formatted text file located within a compressed gz container
-#     - zarr (Zarr-formatted dataset, in which case {files} is treated as directory
-#       names for each Zarr dataset
-format = vcf
+# Whether or not the VCF to Zarr Converter module should be used when running
+# benchmark tool in Setup mode.
+enabled = False
 
+# Type of compression to utilize when storing Zarr-formatted data.
+#  Available Compressor Types:
+#    - Blosc
+#    - LZ4 (not yet implemented)
+#    - LZMA (not yet implemented)
+compressor = Blosc
+
+# (Blosc Compressor Only)
+# Specifies the type of compression algorithm for the Blosc compressor to use.
+# Possible values: zstd, blosclz, lz4, lz4hc, zlib, snappy
+blosc_compression_algorithm = zstd
+
+# (Blosc Compressor Only)
+# Specifies the compression level to use when converting to Zarr
+# Possible values: any integer between 0 and 9
+blosc_compression_level = 1
+
+# (Blosc Compressor Only)
+# Specifies the shuffle mode to use with the Blosc compressor.
+# Possible Values:
+#   - NOSHUFFLE:     0
+#   - SHUFFLE:       1
+#   - BITSHUFFLE:    2
+#   - AUTOSHUFFLE:  -1
+blosc_shuffle_mode = -1
 
 [output]
 output_results = ~/benchmark/results.psv

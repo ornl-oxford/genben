@@ -1,6 +1,7 @@
 from configparser import ConfigParser
 from shutil import copyfile
 import os.path
+from numcodecs import Blosc
 
 
 def config_str_to_bool(input_str):
@@ -37,7 +38,7 @@ class FTPConfigurationRepresentation(object):
     directory = ""  # Directory on FTP server to download files from
     files = []  # List of files within directory to download. Set to empty list to download all files within directory
 
-    def __init__(self, runtime_config):
+    def __init__(self, runtime_config=None):
         """
         Creates an object representation of FTP module configuration data.
         :param runtime_config: runtime_config data to extract FTP settings from
@@ -72,6 +73,57 @@ class FTPConfigurationRepresentation(object):
                         self.files = []
                     else:
                         self.files = files_str.split(delimiter)
+
+
+vcf_to_zarr_compressor_types = ["Blosc"]
+vcf_to_zarr_blosc_algorithm_types = ["zstd", "blosclz", "lz4", "lz4hc", "zlib", "snappy"]
+vcf_to_zarr_blosc_shuffle_types = [Blosc.NOSHUFFLE, Blosc.SHUFFLE, Blosc.BITSHUFFLE, Blosc.AUTOSHUFFLE]
+
+
+class VCFtoZarrConfigurationRepresentation:
+    """ Utility class for object representation of VCF to Zarr conversion module configuration. """
+    enabled = False  # Specifies whether the VCF to Zarr conversion module should be enabled or not
+    compressor = "Blosc"  # Specifies compressor type to use for Zarr conversion
+    blosc_compression_algorithm = "zstd"
+    blosc_compression_level = 1  # Level of compression to use for Zarr conversion
+    blosc_shuffle_mode = Blosc.AUTOSHUFFLE
+
+    def __init__(self, runtime_config=None):
+        """
+        Creates an object representation of VCF to Zarr Conversion module configuration data.
+        :param runtime_config: runtime_config data to extract conversion configuration from
+        :type runtime_config: ConfigurationRepresentation
+        """
+        if runtime_config is not None:
+            # Check if [vcf_to_zarr] section exists in config
+            if hasattr(runtime_config, "vcf_to_zarr"):
+                # Extract relevant settings from config file
+                if "enabled" in runtime_config.vcf_to_zarr:
+                    self.enabled = config_str_to_bool(runtime_config.vcf_to_zarr["enabled"])
+                if "compressor" in runtime_config.vcf_to_zarr:
+                    compressor_temp = runtime_config.vcf_to_zarr["compressor"]
+                    # Ensure compressor type specified is valid
+                    if compressor_temp in vcf_to_zarr_compressor_types:
+                        self.compressor = compressor_temp
+                if "blosc_compression_algorithm" in runtime_config.vcf_to_zarr:
+                    blosc_compression_algorithm_temp = runtime_config.vcf_to_zarr["blosc_compression_algorithm"]
+                    if blosc_compression_algorithm_temp in vcf_to_zarr_blosc_algorithm_types:
+                        self.blosc_compression_algorithm = blosc_compression_algorithm_temp
+                if "blosc_compression_level" in runtime_config.vcf_to_zarr:
+                    try:
+                        compression_level_temp = int(runtime_config.vcf_to_zarr["blosc_compression_level"])
+                        if (compression_level_temp >= 0) and (compression_level_temp <= 9):
+                            self.blosc_compression_level = compression_level_temp
+                    except ValueError:
+                        pass
+                if "blosc_shuffle_mode" in runtime_config.vcf_to_zarr:
+                    try:
+                        blosc_shuffle_mode_temp = int(runtime_config.vcf_to_zarr["blosc_shuffle_mode"])
+                        if blosc_shuffle_mode_temp in vcf_to_zarr_blosc_shuffle_types:
+                            self.blosc_shuffle_mode = blosc_shuffle_mode_temp
+                    except ValueError:
+                        pass
+
 
 
 def read_configuration(location):

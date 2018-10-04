@@ -15,11 +15,32 @@ import functools
 import numpy as np
 import zarr
 import numcodecs
-from numcodecs import Blosc
+from numcodecs import Blosc, LZ4, LZMA
 from benchmark import config
 
 import gzip
 import shutil
+
+
+def create_directory_tree(path):
+    """
+    Creates directories for the path specified.
+    :param path: The path to create dirs/subdirs for
+    :type path: str
+    """
+    path = str(path)  # Ensure path is in str format
+    pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+
+
+def remove_directory_tree(path):
+    """
+    Removes the directory and all subdirectories/files within the path specified.
+    :param path: The path to the directory to remove
+    :type path: str
+    """
+
+    if os.path.exists(path):
+        shutil.rmtree(path, ignore_errors=True)
 
 
 def fetch_data_via_ftp(ftp_config, local_directory):
@@ -29,7 +50,7 @@ def fetch_data_via_ftp(ftp_config, local_directory):
     """
     if ftp_config.enabled:
         # Create local directory tree if it does not exist
-        pathlib.Path(local_directory).mkdir(parents=True, exist_ok=True)
+        create_directory_tree(local_directory)
 
         # Login to FTP server
         if ftp_config.use_tls:
@@ -138,15 +159,80 @@ def fetch_data_via_ftp_recursive(ftp, local_directory, remote_directory, remote_
 
 
 def fetch_file_from_url(url, local_file):
-	urllib.request.urlretrieve(url, local_file)
+    urllib.request.urlretrieve(url, local_file)
+
 
 def decompress_gzip(local_file_gz, local_file):
-	with open(local_file, 'wb') as file_out, gzip.open(local_file_gz, 'rb') as file_in:
-		shutil.copyfileobj(file_in, file_out)
-		
-def convert_to_zarr(source_data,zarr_formatted_data):
-	""" This function converts the original data (vcf) to a zarr format. """
-	pass 
+    with open(local_file, 'wb') as file_out, gzip.open(local_file_gz, 'rb') as file_in:
+        shutil.copyfileobj(file_in, file_out)
+
+
+def process_data_files(input_dir, temp_dir, output_dir):
+    """
+    Iterates through all files in input_dir and processes *.vcf.gz files to *.vcf, placed in output_dir.
+    Additionally moves *.vcf files to output_dir
+    Note: This method searches through all subdirectories within input_dir, and files are placed in root of output_dir.
+    :param input_dir: The input directory containing files to process
+    :param temp_dir: The temporary directory for unzipping *.gz files, etc.
+    :param output_dir: The output directory where processed *.vcf files should go
+    :type input_dir: str
+    :type temp_dir: str
+    :type output_dir: str
+    """
+
+    # Ensure input, temp, and output directory paths are in str format, not pathlib
+    input_dir = str(input_dir)
+    temp_dir = str(temp_dir)
+    output_dir = str(output_dir)
+
+    # Create input, temp, and output directories if they do not exist
+    create_directory_tree(input_dir)
+    create_directory_tree(temp_dir)
+    create_directory_tree(output_dir)
+
+    # Iterate through all *.gz files in input directory and uncompress them to the temporary directory
+    pathlist_gz = pathlib.Path(input_dir).glob("**/*.gz")
+    for path in pathlist_gz:
+        path_str = str(path)
+        file_output_str = path_leaf(path_str)
+        file_output_str = file_output_str[0:len(file_output_str) - 3]  # Truncate *.gz from input filename
+        path_temp_output = str(pathlib.Path(temp_dir, file_output_str))
+        print("[Setup][Data] Decompressing file: {}".format(path_str))
+        print("  - Output: {}".format(path_temp_output))
+
+        # Decompress the .gz file
+        decompress_gzip(path_str, path_temp_output)
+
+    # Iterate through all files in temporary directory and move *.vcf files to output directory
+    pathlist_vcf_temp = pathlib.Path(temp_dir).glob("**/*.vcf")
+    for path in pathlist_vcf_temp:
+        path_temp_str = str(path)
+        filename_str = path_leaf(path_temp_str)  # Strip filename from path
+        path_vcf_str = str(pathlib.Path(output_dir, filename_str))
+
+        shutil.move(path_temp_str, path_vcf_str)
+
+    # Remove temporary directory
+    remove_directory_tree(temp_dir)
+
+    # Copy any *.vcf files already in input directory to the output directory
+    pathlist_vcf_input = pathlib.Path(input_dir).glob("**/*.vcf")
+    for path in pathlist_vcf_input:
+        path_input_str = str(path)
+        filename_str = path_leaf(path_input_str)  # Strip filename from path
+        path_vcf_str = str(pathlib.Path(output_dir, filename_str))
+
+        shutil.copy(path_input_str, path_vcf_str)
+
+
+def path_head(path):
+    head, tail = os.path.split(path)
+    return head
+
+
+def path_leaf(path):
+    head, tail = os.path.split(path)
+    return tail or os.path.basename(head)
 
 
 def read_file_contents(local_filepath):
@@ -158,3 +244,66 @@ def read_file_contents(local_filepath):
         return None
 
 
+def setup_vcf_to_zarr(input_vcf_dir, output_zarr_dir, conversion_config):
+    """
+    Converts all VCF files in input directory to Zarr format, placed in output directory,
+    based on conversion configuration parameters
+    :param input_vcf_dir: The input directory where VCF files are located
+    :param output_zarr_dir: The output directory to place Zarr-formatted data
+    :param conversion_config: Configuration data for the conversion
+    :type input_vcf_dir: str
+    :type output_zarr_dir: str
+    :type conversion_config: config.VCFtoZarrConfigurationRepresentation
+    """
+    # Ensure input and output directory paths are in str format, not pathlib
+    input_vcf_dir = str(input_vcf_dir)
+    output_zarr_dir = str(output_zarr_dir)
+
+    # Create input and output directories if they do not exist
+    create_directory_tree(input_vcf_dir)
+    create_directory_tree(output_zarr_dir)
+
+    # Iterate through all *.vcf files in input directory and convert to Zarr format
+    pathlist_vcf = pathlib.Path(input_vcf_dir).glob("**/*.vcf")
+    for path in pathlist_vcf:
+        path_str = str(path)
+        file_output_str = path_leaf(path_str)
+        file_output_str = file_output_str[0:len(file_output_str) - 4]  # Truncate *.vcf from input filename
+        path_zarr_output = str(pathlib.Path(output_zarr_dir, file_output_str))
+        print("[Setup][Data] Converting VCF file to Zarr format: {}".format(path_str))
+        print("  - Output: {}".format(path_zarr_output))
+
+        # Convert to Zarr format
+        convert_to_zarr(input_vcf_path=path_str,
+                        output_zarr_path=path_zarr_output,
+                        conversion_config=conversion_config)
+
+
+def convert_to_zarr(input_vcf_path, output_zarr_path, conversion_config):
+    """ Converts the original data (VCF) to a Zarr format. Only converts a single VCF file.
+    :param input_vcf_path: The input VCF file location
+    :param output_zarr_path: The desired Zarr output location
+    :param conversion_config: Configuration data for the conversion
+    :type input_vcf_path: str
+    :type output_zarr_path: str
+    :type conversion_config: config.VCFtoZarrConfigurationRepresentation
+    """
+    if conversion_config is not None:
+        # Ensure var is string, not pathlib.Path
+        output_zarr_path = str(output_zarr_path)
+
+        # Scan VCF file to find max number of alleles in any variant
+        callset = allel.read_vcf(input_vcf_path, fields=['numalt'], log=sys.stdout)
+        numalt = callset['variants/numalt']
+        alt_number = np.max(numalt)
+
+        if conversion_config.compressor == "Blosc":
+            compressor = Blosc(cname=conversion_config.blosc_compression_algorithm,
+                               clevel=conversion_config.blosc_compression_level,
+                               shuffle=conversion_config.blosc_shuffle_mode)
+        else:
+            raise ValueError("Unexpected compressor type specified.")
+
+        # Perform the VCF to Zarr conversion
+        allel.vcf_to_zarr(input_vcf_path, output_zarr_path, fields='*', alt_number=alt_number,
+                          log=sys.stdout, compressor=compressor)

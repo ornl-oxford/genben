@@ -1,7 +1,7 @@
 # custom ignores
 opt
 /data/
-testcfg.cfg
+testcfg.ini
 .idea/
 
 # Byte-compiled / optimized / DLL files

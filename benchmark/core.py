@@ -2,28 +2,31 @@
 determines the runtime mode (dynamic vs. static); if dynamic, gets the benchmark data from the server,
 runs the benchmarks, and records the timer results. """
 
-import time # for benchmark timer
-import csv # for writing results
+import time  # for benchmark timer
+import csv  # for writing results
 import logging
 
 
 def run_benchmark(bench_conf):
-  pass
+    pass
+
 
 def run_dynamic(ftp_location):
-  pass
+    pass
+
 
 def run_static():
-  pass
+    pass
 
-def get_remote_files(ftp_server, ftp_directory,files=None):
-  pass
+
+def get_remote_files(ftp_server, ftp_directory, files=None):
+    pass
+
 
 def record_runtime(benchmark, timestamp):
-  pass
+    pass
+
 
 # temporary here
 def main():
-  pass
-
-
+    pass

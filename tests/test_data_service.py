@@ -7,6 +7,7 @@ import os.path
 import shutil
 import zarr
 import numpy as np
+import pathlib
 
 from benchmark import data_service, config
 
@@ -88,6 +89,81 @@ class TestDataServices(unittest.TestCase):
         else:
             self.fail("File should not exist on filesystem. Please remove the file and try running test again.")
 
+    def test_process_data_files(self):
+        # Define test input files
+        test_dir = "./tests/data/"
+        test_files_input = ["trio.2010_06.ychr.sites.vcf.gz"]
+        test_files_expected = ["trio.2010_06.ychr.sites.vcf"]
+
+        # Setup test processing directories
+        process_data_files_test_dir = "./data/unittest/"
+        input_dir_test = process_data_files_test_dir + "input/"
+        temp_dir_test = process_data_files_test_dir + "temp/"
+        output_dir_test = process_data_files_test_dir + "vcf/"
+
+        # Remove the test directory created for this unittest (from any previous unit testing)
+        if os.path.exists(process_data_files_test_dir):
+            shutil.rmtree(process_data_files_test_dir)
+
+        # Create input directory
+        pathlib.Path(input_dir_test).mkdir(parents=True, exist_ok=True)
+
+        # Copy test files into input directory to test data processing
+        for test_file in test_files_input:
+            test_file_expected = test_dir + test_file
+            test_file_output = input_dir_test + test_file
+            if os.path.exists(test_file_expected):
+                shutil.copy(test_file_expected, test_file_output)
+
+        # Process the test files
+        data_service.process_data_files(input_dir=input_dir_test, temp_dir=temp_dir_test, output_dir=output_dir_test)
+
+        # Check the results to ensure corresponding vcf files exist in output directory
+        error_flag = False
+        for test_file_expected in test_files_expected:
+            if not os.path.exists(output_dir_test + test_file_expected):
+                error_flag = True
+
+        # Remove the test directory created for this unittest
+        shutil.rmtree(process_data_files_test_dir)
+
+        # Return an error if the test failed
+        if error_flag:
+            self.fail(msg="One or more test files were not processed and placed in output directory.")
+
+    def test_convert_to_zarr(self):
+        input_vcf_path = "./tests/data/trio.2010_06.ychr.sites.vcf"
+        output_zarr_path = "trio.2010_06.ychr.sites.zarr"
+
+        # Attempt to remove local file in case a previous unit test failed to do so (prevents false positive)
+        if os.path.isdir(output_zarr_path):
+            shutil.rmtree(output_zarr_path)
+
+        if os.path.isfile(input_vcf_path):
+            # Setup test settings for Zarr conversion
+            vcf_to_zarr_config = config.VCFtoZarrConfigurationRepresentation()
+            vcf_to_zarr_config.enabled = True
+            vcf_to_zarr_config.compressor = "Blosc"
+            vcf_to_zarr_config.blosc_compression_algorithm = "zstd"
+            vcf_to_zarr_config.blosc_compression_level = 1
+            vcf_to_zarr_config.blosc_shuffle_mode = -1
+
+            # Convert VCF file to Zarr
+            data_service.convert_to_zarr(input_vcf_path=input_vcf_path,
+                                         output_zarr_path=output_zarr_path,
+                                         conversion_config=vcf_to_zarr_config)
+
+            # Load the Zarr data from storage for testing
+            callset = zarr.open_group(output_zarr_path, mode="r")
+            numalt = callset['variants/numalt']
+            self.assertEqual(np.size(numalt), 959)
+            self.assertEqual(np.max(numalt), 1)
+        else:
+            self.fail("Test data file does not exist. Please ensure the file exists and try running test again")
+
+        # Remove the Zarr test data
+        if os.path.isdir(output_zarr_path):
+            shutil.rmtree(output_zarr_path)
 
 
 if __name__ == "__main__":
