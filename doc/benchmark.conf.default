@@ -38,6 +38,10 @@ file_delimiter = |
 # benchmark tool in Setup mode.
 enabled = False
 
+# Alt number to assume when converting to Zarr format. If set to "auto" or "none", this will be determined during
+# the conversion process.
+alt_number = auto
+
 # Type of compression to utilize when storing Zarr-formatted data.
 #  Available Compressor Types:
 #    - Blosc

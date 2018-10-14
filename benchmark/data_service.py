@@ -292,10 +292,17 @@ def convert_to_zarr(input_vcf_path, output_zarr_path, conversion_config):
         # Ensure var is string, not pathlib.Path
         output_zarr_path = str(output_zarr_path)
 
-        # Scan VCF file to find max number of alleles in any variant
-        callset = allel.read_vcf(input_vcf_path, fields=['numalt'], log=sys.stdout)
-        numalt = callset['variants/numalt']
-        alt_number = np.max(numalt)
+        if conversion_config.alt_number is None:
+            print("[VCF-Zarr] Determining alt number from VCF meta-information.")
+            # Scan VCF file to find max number of alleles in any variant
+            callset = allel.read_vcf(input_vcf_path, fields=['numalt'], log=sys.stdout)
+            numalt = callset['variants/numalt']
+            alt_number = np.max(numalt)
+        else:
+            print("[VCF-Zarr] Using alt number provided in configuration.")
+            # Use the configuration-provided alt number
+            alt_number = conversion_config.alt_number
+        print("[VCF-Zarr] Alt number: {}".format(alt_number))
 
         if conversion_config.compressor == "Blosc":
             compressor = Blosc(cname=conversion_config.blosc_compression_algorithm,
@@ -304,6 +311,10 @@ def convert_to_zarr(input_vcf_path, output_zarr_path, conversion_config):
         else:
             raise ValueError("Unexpected compressor type specified.")
 
+        print("[VCF-Zarr] Using {} compressor.".format(conversion_config.compressor))
+
+        print("[VCF-Zarr] Performing VCF to Zarr conversion...")
         # Perform the VCF to Zarr conversion
         allel.vcf_to_zarr(input_vcf_path, output_zarr_path, fields='*', alt_number=alt_number,
                           log=sys.stdout, compressor=compressor)
+        print("[VCF-Zarr] Done.")
