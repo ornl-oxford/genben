@@ -100,6 +100,8 @@ class VCFtoZarrConfigurationRepresentation:
     """ Utility class for object representation of VCF to Zarr conversion module configuration. """
     enabled = False  # Specifies whether the VCF to Zarr conversion module should be enabled or not
     alt_number = None  # Alt number to use when converting to Zarr format. If None, then this will need to be determined
+    chunk_length = None  # Number of variants of chunks in which data are processed. If None, use default value
+    chunk_width = None  # Number of samples to use when storing chunks in output. If None, use default value
     compressor = "Blosc"  # Specifies compressor type to use for Zarr conversion
     blosc_compression_algorithm = "zstd"
     blosc_compression_level = 1  # Level of compression to use for Zarr conversion
@@ -124,7 +126,18 @@ class VCFtoZarrConfigurationRepresentation:
                         self.alt_number = None
                     elif isint(alt_number_str):
                         self.alt_number = int(alt_number_str)
-
+                if "chunk_length" in runtime_config.vcf_to_zarr:
+                    chunk_length_str = runtime_config.vcf_to_zarr["chunk_length"]
+                    if chunk_length_str == "default":
+                        self.chunk_length = None
+                    elif isint(chunk_length_str):
+                        self.chunk_length = int(chunk_length_str)
+                if "chunk_width" in runtime_config.vcf_to_zarr:
+                    chunk_width_str = runtime_config.vcf_to_zarr["chunk_width"]
+                    if chunk_width_str == "default":
+                        self.chunk_width = None
+                    elif isint(chunk_width_str):
+                        self.chunk_width = int(chunk_width_str)
                 if "compressor" in runtime_config.vcf_to_zarr:
                     compressor_temp = runtime_config.vcf_to_zarr["compressor"]
                     # Ensure compressor type specified is valid

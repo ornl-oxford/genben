@@ -38,9 +38,17 @@ file_delimiter = |
 # benchmark tool in Setup mode.
 enabled = False
 
-# Alt number to assume when converting to Zarr format. If set to "auto" or "none", this will be determined during
-# the conversion process.
+# Alt number to assume when converting to Zarr format.
+# If set to "auto" or "none", this will be determined during the conversion process.
 alt_number = auto
+
+# Number of variants of chunks in which data are processed.
+# If set to "default", the default value from scikit-allel is used.
+chunk_length = default
+
+# Number of samples to use when storing chunks in output.
+# If set to "default", the default value from scikit-allel is used.
+chunk_width = default
 
 # Type of compression to utilize when storing Zarr-formatted data.
 #  Available Compressor Types:
