@@ -162,12 +162,24 @@ class VCFtoZarrConfigurationRepresentation:
                         compression_level_int = int(blosc_compression_level_str)
                         if (compression_level_int >= 0) and (compression_level_int <= 9):
                             self.blosc_compression_level = compression_level_int
+                        else:
+                            raise ValueError("Invalid value for blosc_compression_level in configuration.\n"
+                                             "blosc_compression_level must be between 0 and 9.")
+                    else:
+                        raise TypeError("Invalid value for blosc_compression_level in configuration.\n"
+                                        "blosc_compression_level could not be converted to integer.")
                 if "blosc_shuffle_mode" in runtime_config.vcf_to_zarr:
                     blosc_shuffle_mode_str = runtime_config.vcf_to_zarr["blosc_shuffle_mode"]
                     if isint(blosc_shuffle_mode_str):
                         blosc_shuffle_mode_int = int(blosc_shuffle_mode_str)
                         if blosc_shuffle_mode_int in vcf_to_zarr_blosc_shuffle_types:
                             self.blosc_shuffle_mode = blosc_shuffle_mode_int
+                        else:
+                            raise ValueError("Invalid value for blosc_shuffle_mode in configuration.\n"
+                                             "blosc_shuffle_mode must be a valid integer.")
+                    else:
+                        raise TypeError("Invalid value for blosc_shuffle_mode in configuration.\n"
+                                        "blosc_shuffle_mode could not be converted to integer.")
 
 
 def read_configuration(location):
