@@ -294,7 +294,7 @@ def convert_to_zarr(input_vcf_path, output_zarr_path, conversion_config):
 
         # Get alt number
         if conversion_config.alt_number is None:
-            print("[VCF-Zarr] Determining alt number from VCF meta-information.")
+            print("[VCF-Zarr] Determining maximum number of ALT alleles by scaling all variants in the VCF file.")
             # Scan VCF file to find max number of alleles in any variant
             callset = allel.read_vcf(input_vcf_path, fields=['numalt'], log=sys.stdout)
             numalt = callset['variants/numalt']
