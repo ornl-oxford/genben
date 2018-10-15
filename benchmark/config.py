@@ -122,22 +122,31 @@ class VCFtoZarrConfigurationRepresentation:
                 if "alt_number" in runtime_config.vcf_to_zarr:
                     alt_number_str = runtime_config.vcf_to_zarr["alt_number"]
 
-                    if str(alt_number_str).lower() in ["none", "auto"]:
+                    if str(alt_number_str).lower() == "auto":
                         self.alt_number = None
                     elif isint(alt_number_str):
                         self.alt_number = int(alt_number_str)
+                    else:
+                        raise TypeError("Invalid value provided for alt_number in configuration.\n"
+                                        "Expected: \"auto\" or integer value")
                 if "chunk_length" in runtime_config.vcf_to_zarr:
                     chunk_length_str = runtime_config.vcf_to_zarr["chunk_length"]
                     if chunk_length_str == "default":
                         self.chunk_length = None
                     elif isint(chunk_length_str):
                         self.chunk_length = int(chunk_length_str)
+                    else:
+                        raise TypeError("Invalid value provided for chunk_length in configuration.\n"
+                                        "Expected: \"default\" or integer value")
                 if "chunk_width" in runtime_config.vcf_to_zarr:
                     chunk_width_str = runtime_config.vcf_to_zarr["chunk_width"]
                     if chunk_width_str == "default":
                         self.chunk_width = None
                     elif isint(chunk_width_str):
                         self.chunk_width = int(chunk_width_str)
+                    else:
+                        raise TypeError("Invalid value provided for chunk_width in configuration.\n"
+                                        "Expected: \"default\" or integer value")
                 if "compressor" in runtime_config.vcf_to_zarr:
                     compressor_temp = runtime_config.vcf_to_zarr["compressor"]
                     # Ensure compressor type specified is valid

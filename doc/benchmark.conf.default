@@ -39,7 +39,7 @@ file_delimiter = |
 enabled = False
 
 # Alt number to assume when converting to Zarr format.
-# If set to "auto" or "none", this will be determined during the conversion process.
+# If set to "auto", this will be determined during the conversion process.
 alt_number = auto
 
 # Number of variants of chunks in which data are processed.
