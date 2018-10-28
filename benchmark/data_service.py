@@ -328,6 +328,6 @@ def convert_to_zarr(input_vcf_path, output_zarr_path, conversion_config):
 
         print("[VCF-Zarr] Performing VCF to Zarr conversion...")
         # Perform the VCF to Zarr conversion
-        allel.vcf_to_zarr(input_vcf_path, output_zarr_path, alt_number=alt_number,
+        allel.vcf_to_zarr(input_vcf_path, output_zarr_path, alt_number=alt_number, overwrite=True,
                           log=sys.stdout, compressor=compressor, chunk_length=chunk_length, chunk_width=chunk_width)
         print("[VCF-Zarr] Done.")
