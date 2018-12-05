@@ -2,7 +2,14 @@
 determines the runtime mode (dynamic vs. static); if dynamic, gets the benchmark data from the server,
 runs the benchmarks, and records the timer results. """
 
-import urllib.request
+import sys
+
+# Support Python 2.x and 3.x
+if sys.version_info[0] >= 3:
+    from urllib.request import urlretrieve
+else:
+    from urllib import urlretrieve
+
 from ftplib import FTP, FTP_TLS, error_perm
 import time  # for benchmark timer
 import csv  # for writing results
@@ -15,8 +22,8 @@ import functools
 import numpy as np
 import zarr
 import numcodecs
-from numcodecs import Blosc, LZ4, LZMA
-from benchmark import config
+from numcodecs import Blosc
+from genomics_benchmarks import config
 
 import gzip
 import shutil
@@ -29,7 +36,10 @@ def create_directory_tree(path):
     :type path: str
     """
     path = str(path)  # Ensure path is in str format
-    pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+    try:
+        pathlib.Path(path).mkdir(parents=True)
+    except OSError:  # Catch if directory already exists
+        pass
 
 
 def remove_directory_tree(path):
@@ -159,7 +169,7 @@ def fetch_data_via_ftp_recursive(ftp, local_directory, remote_directory, remote_
 
 
 def fetch_file_from_url(url, local_file):
-    urllib.request.urlretrieve(url, local_file)
+    urlretrieve(url, local_file)
 
 
 def decompress_gzip(local_file_gz, local_file):
@@ -279,18 +289,24 @@ def setup_vcf_to_zarr(input_vcf_dir, output_zarr_dir, conversion_config):
                         conversion_config=conversion_config)
 
 
-def convert_to_zarr(input_vcf_path, output_zarr_path, conversion_config):
+def convert_to_zarr(input_vcf_path, output_zarr_path, conversion_config, benchmark_runner=None):
     """ Converts the original data (VCF) to a Zarr format. Only converts a single VCF file.
+    If a BenchmarkRunner is provided, the actual VCF to Zarr conversion process will be benchmarked.
     :param input_vcf_path: The input VCF file location
     :param output_zarr_path: The desired Zarr output location
     :param conversion_config: Configuration data for the conversion
+    :param benchmark_runner: BenchmarkRunner object to be used for benchmarking process
     :type input_vcf_path: str
     :type output_zarr_path: str
     :type conversion_config: config.VCFtoZarrConfigurationRepresentation
+    :type benchmark_runner: core.BenchmarkProfiler
     """
     if conversion_config is not None:
         # Ensure var is string, not pathlib.Path
         output_zarr_path = str(output_zarr_path)
+
+        # Get fields to extract (for unit testing only)
+        fields = conversion_config.fields
 
         # Get alt number
         if conversion_config.alt_number is None:
@@ -324,10 +340,42 @@ def convert_to_zarr(input_vcf_path, output_zarr_path, conversion_config):
         else:
             raise ValueError("Unexpected compressor type specified.")
 
-        print("[VCF-Zarr] Using {} compressor.".format(conversion_config.compressor))
+        if benchmark_runner is not None:
+            benchmark_runner.start_benchmark(operation_name="Convert VCF to Zarr")
 
-        print("[VCF-Zarr] Performing VCF to Zarr conversion...")
         # Perform the VCF to Zarr conversion
-        allel.vcf_to_zarr(input_vcf_path, output_zarr_path, alt_number=alt_number, overwrite=True,
+        allel.vcf_to_zarr(input_vcf_path, output_zarr_path, alt_number=alt_number, overwrite=True, fields=fields,
                           log=sys.stdout, compressor=compressor, chunk_length=chunk_length, chunk_width=chunk_width)
-        print("[VCF-Zarr] Done.")
+
+        if benchmark_runner is not None:
+            benchmark_runner.end_benchmark()
+
+
+GENOTYPE_ARRAY_NORMAL = 0
+GENOTYPE_ARRAY_DASK = 1
+GENOTYPE_ARRAY_CHUNKED = 2
+
+
+def get_genotype_data(callset, genotype_array_type=GENOTYPE_ARRAY_DASK):
+    genotype_ref_name = ''
+
+    # Ensure 'calldata' is within the callset
+    if 'calldata' in callset:
+        # Try to find either GT or genotype in calldata
+        if 'GT' in callset['calldata']:
+            genotype_ref_name = 'GT'
+        elif 'genotype' in callset['calldata']:
+            genotype_ref_name = 'genotype'
+        else:
+            return None
+    else:
+        return None
+
+    if genotype_array_type == GENOTYPE_ARRAY_NORMAL:
+        return allel.GenotypeArray(callset['calldata'][genotype_ref_name])
+    elif genotype_array_type == GENOTYPE_ARRAY_DASK:
+        return allel.GenotypeDaskArray(callset['calldata'][genotype_ref_name])
+    elif genotype_array_type == GENOTYPE_ARRAY_CHUNKED:
+        return allel.GenotypeChunkedArray(callset['calldata'][genotype_ref_name])
+    else:
+        return None

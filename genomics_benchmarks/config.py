@@ -1,6 +1,7 @@
 from configparser import ConfigParser
 from shutil import copyfile
 import os.path
+from pkg_resources import resource_string
 from numcodecs import Blosc
 
 
@@ -11,6 +12,15 @@ def config_str_to_bool(input_str):
     :return: bool
     """
     return input_str.lower() in ['true', '1', 't', 'y', 'yes']
+
+
+class DataDirectoriesConfigurationRepresentation:
+    input_dir = "./data/input/"
+    download_dir = input_dir + "download/"
+    temp_dir = "./data/temp/"
+    vcf_dir = "./data/vcf/"
+    zarr_dir_setup = "./data/zarr/"
+    zarr_dir_benchmark = "./data/zarr_benchmark/"
 
 
 def isint(value):
@@ -99,6 +109,7 @@ vcf_to_zarr_blosc_shuffle_types = [Blosc.NOSHUFFLE, Blosc.SHUFFLE, Blosc.BITSHUF
 class VCFtoZarrConfigurationRepresentation:
     """ Utility class for object representation of VCF to Zarr conversion module configuration. """
     enabled = False  # Specifies whether the VCF to Zarr conversion module should be enabled or not
+    fields = None
     alt_number = None  # Alt number to use when converting to Zarr format. If None, then this will need to be determined
     chunk_length = None  # Number of variants of chunks in which data are processed. If None, use default value
     chunk_width = None  # Number of samples to use when storing chunks in output. If None, use default value
@@ -182,6 +193,47 @@ class VCFtoZarrConfigurationRepresentation:
                                         "blosc_shuffle_mode could not be converted to integer.")
 
 
+benchmark_data_input_types = ["vcf", "zarr"]
+
+
+class BenchmarkConfigurationRepresentation:
+    """ Utility class for object representation of the benchmark module's configuration. """
+    benchmark_number_runs = 5
+    benchmark_data_input = "vcf"
+    benchmark_dataset = ""
+    benchmark_allele_count = False
+    benchmark_PCA = False
+    vcf_to_zarr_config = None
+
+    def __init__(self, runtime_config=None):
+        """
+        Creates an object representation of the Benchmark module's configuration data.
+        :param runtime_config: runtime_config data to extract benchmark configuration from
+        :type runtime_config: ConfigurationRepresentation
+        """
+        if runtime_config is not None:
+            if hasattr(runtime_config, "benchmark"):
+                # Extract relevant settings from config file
+                if "benchmark_number_runs" in runtime_config.benchmark:
+                    try:
+                        self.benchmark_number_runs = int(runtime_config.benchmark["benchmark_number_runs"])
+                    except ValueError:
+                        pass
+                if "benchmark_data_input" in runtime_config.benchmark:
+                    benchmark_data_input_temp = runtime_config.benchmark["benchmark_data_input"]
+                    if benchmark_data_input_temp in benchmark_data_input_types:
+                        self.benchmark_data_input = benchmark_data_input_temp
+                if "benchmark_dataset" in runtime_config.benchmark:
+                    self.benchmark_dataset = runtime_config.benchmark["benchmark_dataset"]
+                if "benchmark_allele_count" in runtime_config.benchmark:
+                    self.benchmark_allele_count = config_str_to_bool(runtime_config.benchmark["benchmark_allele_count"])
+                if "benchmark_PCA" in runtime_config.benchmark:
+                    self.benchmark_PCA = config_str_to_bool(runtime_config.benchmark["benchmark_PCA"])
+
+            # Add the VCF to Zarr Conversion Configuration Data
+            self.vcf_to_zarr_config = VCFtoZarrConfigurationRepresentation(runtime_config=runtime_config)
+
+
 def read_configuration(location):
     """
     Args: location of the configuration file, existing configuration dictionary
@@ -193,7 +245,8 @@ def read_configuration(location):
 
 
 def generate_default_config_file(output_location, overwrite=False):
-    default_config_file_location = "doc/benchmark.conf.default"
+    # Get Default Config File Data as Package Resource
+    default_config_file_data = resource_string(__name__, 'config/benchmark.conf.default')
 
     if overwrite is None:
         overwrite = False
@@ -205,15 +258,12 @@ def generate_default_config_file(output_location, overwrite=False):
                 "[Config] Could not generate configuration file: file exists at specified destination and overwrite mode disabled.")
             return
 
-        if os.path.exists(default_config_file_location):
-            # Write the default configuration file to specified location
-            copyfile(default_config_file_location, output_location)
+        # Write the default configuration file to specified location
+        with open(output_location, 'wb') as output_file:
+            output_file.write(default_config_file_data)
 
-            # Check whether configuration file now exists and report status
-            if os.path.exists(output_location):
-                print("[Config] Configuration file has been generated successfully.")
-            else:
-                print("[Config] Configuration file was not generated.")
+        # Check whether configuration file now exists and report status
+        if os.path.exists(output_location):
+            print("[Config] Configuration file has been generated successfully.")
         else:
-            print("[Config] Default configuration file could not be found. File should be located at:\n\t{}"
-                  .format(default_config_file_location))
+            print("[Config] Configuration file was not generated.")

@@ -3,12 +3,13 @@ determines the runtime mode (dynamic vs. static); if dynamic, gets the benchmark
 runs the benchmarks, and records the timer results. """
 
 import argparse  # for command line parsing
+import datetime
 import time  # for benchmark timer
 import csv  # for writing results
 import logging
 import sys
 import shutil
-from benchmark import config, data_service
+from genomics_benchmarks import core, config, data_service
 
 
 def get_cli_arguments():
@@ -41,8 +42,10 @@ def get_cli_arguments():
 
     benchmark_exec_parser = subparser.add_parser("exec",
                                                  help='Execution of the benchmark modes. It requires a configuration file.')
-    # TODO: use run_(timestamp) as default
-    benchmark_exec_parser.add_argument("--label", type=str, default="run", metavar="RUN_LABEL",
+
+    timestamp_current = datetime.datetime.fromtimestamp(time.time())
+    benchmark_label_default = "run_{timestamp}".format(timestamp=timestamp_current.strftime("%Y-%m-%d_%H-%M-%S"))
+    benchmark_exec_parser.add_argument("--label", type=str, default=benchmark_label_default, metavar="RUN_LABEL",
                                        help="Label for the benchmark run.")
     benchmark_exec_parser.add_argument("--config_file", type=str, required=True,
                                        help="Specify the path to a configuration file.", metavar="FILEPATH")
@@ -52,12 +55,7 @@ def get_cli_arguments():
 
 
 def _main():
-    input_directory = "./data/input/"
-    download_directory = input_directory + "download/"
-    temp_directory = "./data/temp/"
-    vcf_directory = "./data/vcf/"
-    zarr_directory_setup = "./data/zarr/"
-    zarr_directory_benchmark = "./data/zarr_benchmark/"
+    data_dirs = config.DataDirectoriesConfigurationRepresentation()
 
     cli_arguments = get_cli_arguments()
 
@@ -71,8 +69,8 @@ def _main():
         print("[Setup] Setting up benchmark data.")
 
         # Clear out existing files in VCF and Zarr directories
-        data_service.remove_directory_tree(vcf_directory)
-        data_service.remove_directory_tree(zarr_directory_setup)
+        data_service.remove_directory_tree(data_dirs.vcf_dir)
+        data_service.remove_directory_tree(data_dirs.zarr_dir_setup)
 
         # Get runtime config from specified location
         runtime_config = config.read_configuration(location=cli_arguments["config_file"])
@@ -82,40 +80,40 @@ def _main():
 
         if ftp_config.enabled:
             print("[Setup][FTP] FTP module enabled. Running FTP download...")
-            data_service.fetch_data_via_ftp(ftp_config=ftp_config, local_directory=download_directory)
+            data_service.fetch_data_via_ftp(ftp_config=ftp_config, local_directory=data_dirs.download_dir)
         else:
             print("[Setup][FTP] FTP module disabled. Skipping FTP download...")
 
         # Process/Organize downloaded files
-        data_service.process_data_files(input_dir=input_directory,
-                                        temp_dir=temp_directory,
-                                        output_dir=vcf_directory)
+        data_service.process_data_files(input_dir=data_dirs.input_dir,
+                                        temp_dir=data_dirs.temp_dir,
+                                        output_dir=data_dirs.vcf_dir)
 
         # Convert VCF files to Zarr format if the module is enabled
         vcf_to_zarr_config = config.VCFtoZarrConfigurationRepresentation(runtime_config)
         if vcf_to_zarr_config.enabled:
-            data_service.setup_vcf_to_zarr(input_vcf_dir=vcf_directory,
-                                           output_zarr_dir=zarr_directory_setup,
+            data_service.setup_vcf_to_zarr(input_vcf_dir=data_dirs.vcf_dir,
+                                           output_zarr_dir=data_dirs.zarr_dir_setup,
                                            conversion_config=vcf_to_zarr_config)
     elif command == "exec":
         print("[Exec] Executing benchmark tool.")
 
+        # Clear out existing files in Zarr benchmark directory
+        data_service.remove_directory_tree(data_dirs.zarr_dir_benchmark)
+
         # Get runtime config from specified location
         runtime_config = config.read_configuration(location=cli_arguments["config_file"])
 
-        # Get VCF to Zarr conversion settings from runtime config
-        vcf_to_zarr_config = config.VCFtoZarrConfigurationRepresentation(runtime_config)
+        benchmark_label = cli_arguments["label"]
 
-        # TODO: Convert necessary VCF files to Zarr format
-        # data_service.convert_to_zarr("./data/vcf/chr22.1000.vcf", "./data/zarr/chr22.1000.zarr", vcf_to_zarr_config)
+        # Get Benchmark module settings from runtime config
+        benchmark_config = config.BenchmarkConfigurationRepresentation(runtime_config)
+
+        # Setup the benchmark runner
+        benchmark = core.Benchmark(bench_conf=benchmark_config, data_dirs=data_dirs, benchmark_label=benchmark_label)
+
+        # Run the benchmark
+        benchmark.run_benchmark()
     else:
         print("Error: Unexpected command specified. Exiting...")
-        sys.exit(1)
-
-
-def main():
-    try:
-        _main()
-    except KeyboardInterrupt:
-        print("Program interrupted. Exiting...")
         sys.exit(1)
