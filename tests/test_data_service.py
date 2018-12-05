@@ -40,8 +40,8 @@ class TestDataServices(unittest.TestCase):
 
     def test_fetch_file_from_url(self):
         """ Tests fetching a data to be used in benchmarking from a remote URL. """
-        remote_file_url = "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/pilot_data/release/2010_07/trio/snps/trio.2010_06.ychr.sites.vcf.gz"
-        local_filename = "trio.2010_06.ychr.sites.vcf.gz"
+        remote_file_url = "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/pilot_data/release/2010_07/trio/snps/trio.2010_06.ychr.genotypes.vcf.gz"
+        local_filename = "trio.2010_06.ychr.genotypes.vcf.gz"
 
         # Attempt to remove local file in case a previous unit test failed to do so (prevents false positive)
         if os.path.isfile(local_filename):
@@ -56,8 +56,8 @@ class TestDataServices(unittest.TestCase):
 
     def test_decompress_gzip(self):
         """ Tests decompressing the fetched file. """
-        local_file_gz = "./tests/data/trio.2010_06.ychr.sites.vcf.gz"
-        local_filename = "trio.2010_06.ychr.sites.vcf"
+        local_file_gz = "./tests/data/trio.2010_06.ychr.genotypes.vcf.gz"
+        local_filename = "trio.2010_06.ychr.genotypes.vcf"
 
         # Attempt to remove local file in case a previous unit test failed to do so (prevents false positive)
         if os.path.isfile(local_filename):
@@ -91,8 +91,8 @@ class TestDataServices(unittest.TestCase):
     def test_process_data_files(self):
         # Define test input files
         test_dir = "./tests/data/"
-        test_files_input = ["trio.2010_06.ychr.sites.vcf.gz"]
-        test_files_expected = ["trio.2010_06.ychr.sites.vcf"]
+        test_files_input = ["trio.2010_06.ychr.genotypes.vcf.gz"]
+        test_files_expected = ["trio.2010_06.ychr.genotypes.vcf"]
 
         # Setup test processing directories
         process_data_files_test_dir = "./data/unittest/"
@@ -131,8 +131,8 @@ class TestDataServices(unittest.TestCase):
             self.fail(msg="One or more test files were not processed and placed in output directory.")
 
     def test_convert_to_zarr(self):
-        input_vcf_path = "./tests/data/trio.2010_06.ychr.sites.vcf"
-        output_zarr_path = "trio.2010_06.ychr.sites.zarr"
+        input_vcf_path = "./tests/data/trio.2010_06.ychr.genotypes.vcf"
+        output_zarr_path = "trio.2010_06.ychr.genotypes.zarr"
 
         # Attempt to remove local file in case a previous unit test failed to do so (prevents false positive)
         if os.path.isdir(output_zarr_path):
