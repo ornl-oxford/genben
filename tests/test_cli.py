@@ -32,9 +32,7 @@ class TestCommandLineInterface(unittest.TestCase):
         # Test group 2 -- setup
         self.run_subparser_test("setup","config_file","./benhcmark.conf")  
         # Test group 3 - Tests if it the argparser is setting default values """
-        self.run_subparser_test("exec","config_file","./benchmark.conf")  
-        # Test group 4 - Tests if it the argparser is setting default values """
-        self.run_subparser_test("exec","config_file","./benchmark.conf","label","run")    
+        self.run_subparser_test("exec","config_file","./benchmark.conf")
 
 
     def test_parser_expected_failing(self):

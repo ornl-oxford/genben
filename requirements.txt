@@ -1,3 +1,4 @@
 scikit-allel
 perf
 numcodecs
+pandas

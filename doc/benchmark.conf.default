@@ -4,7 +4,8 @@ run_mode = fetch_data
 
 [ftp]
 
-# Whether or not the FTP downloader module should be used when running benchmark tool in Setup mode.
+# Whether or not the FTP downloader module should be used when running benchmark
+# tool in Setup mode.
 enabled = False
 
 # FTP Server to retrieve files from:
@@ -22,7 +23,7 @@ use_tls = False
 directory = files
 
 # File or list of files to download within {directory}.
-#  - If downloading list of files, names should be separated using 
+#  - If downloading list of files, names should be separated using
 #    delimiter specified in {file_delimiter}.
 #  - To download all files within {directory}, set {files} to "*" (without quotes).
 files = sample.vcf
@@ -36,6 +37,8 @@ file_delimiter = |
 
 # Whether or not the VCF to Zarr Converter module should be used when running
 # benchmark tool in Setup mode.
+# Note: To run VCF to Zarr conversion as part of the benchmark process, see
+#       the [benchmark] configuration section.
 enabled = False
 
 # Alt number to assume when converting to Zarr format.
@@ -75,6 +78,31 @@ blosc_compression_level = 1
 #   - BITSHUFFLE:    2
 #   - AUTOSHUFFLE:  -1
 blosc_shuffle_mode = -1
+
+[benchmark]
+
+# Specifies how many times the benchmark tool should run
+# each available benchmark.
+benchmark_number_runs = 5
+
+# Specifies where the benchmark tool should get its data from.
+# Possible Values:
+#   - vcf:  uses datasets within the ./data/vcf/ directory. This option will
+#           result in VCF data being converted to Zarr format as part of the
+#           benchmarking process.
+#   - zarr: uses Zarr-formtted datasets within the ./data/zarr/ directory. This
+#           option will result in skipping the benchmark of the VCF to Zarr
+#           conversion process.
+benchmark_data_input = vcf
+
+# Specifies which dataset to use for the benchmarking process.
+benchmark_dataset =
+
+# Enables/disables running an allele count as part of the benchmarking process.
+benchmark_allele_count = True
+
+# Enables Principal Component Analysis (PCA) as part of the benchmarking process.
+benchmark_PCA = False
 
 [output]
 output_results = ~/benchmark/results.psv

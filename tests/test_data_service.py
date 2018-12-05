@@ -142,6 +142,7 @@ class TestDataServices(unittest.TestCase):
         if os.path.isfile(input_vcf_path):
             # Setup test settings for Zarr conversion
             vcf_to_zarr_config = config.VCFtoZarrConfigurationRepresentation()
+            vcf_to_zarr_config.fields = 'variants/numalt'
             vcf_to_zarr_config.enabled = True
             vcf_to_zarr_config.compressor = "Blosc"
             vcf_to_zarr_config.blosc_compression_algorithm = "zstd"
