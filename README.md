@@ -1,4 +1,6 @@
 # genomics-benchmarks
+![Build status of genomics-benchmarks on Travis CI](https://api.travis-ci.com/ornl-oxford/genomics-benchmarks.svg?branch=master)
+
 Benchmarking of systems for storage and compute over large-scale genomic data
 
 ## Setup and Execution  

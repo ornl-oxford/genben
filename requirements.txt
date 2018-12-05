@@ -9,6 +9,7 @@ ipykernel
 dask
 numcodecs
 zarr
+toolz
 scikit-allel
 perf
 mock ; python_version == '2.7'
