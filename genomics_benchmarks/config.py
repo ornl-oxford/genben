@@ -201,7 +201,7 @@ class BenchmarkConfigurationRepresentation:
     benchmark_number_runs = 5
     benchmark_data_input = "vcf"
     benchmark_dataset = ""
-    benchmark_allele_count = False
+    benchmark_aggregations = False
     benchmark_PCA = False
     vcf_to_zarr_config = None
 
@@ -225,8 +225,8 @@ class BenchmarkConfigurationRepresentation:
                         self.benchmark_data_input = benchmark_data_input_temp
                 if "benchmark_dataset" in runtime_config.benchmark:
                     self.benchmark_dataset = runtime_config.benchmark["benchmark_dataset"]
-                if "benchmark_allele_count" in runtime_config.benchmark:
-                    self.benchmark_allele_count = config_str_to_bool(runtime_config.benchmark["benchmark_allele_count"])
+                if "benchmark_aggregations" in runtime_config.benchmark:
+                    self.benchmark_aggregations = config_str_to_bool(runtime_config.benchmark["benchmark_aggregations"])
                 if "benchmark_PCA" in runtime_config.benchmark:
                     self.benchmark_PCA = config_str_to_bool(runtime_config.benchmark["benchmark_PCA"])
 

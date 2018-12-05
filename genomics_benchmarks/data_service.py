@@ -289,7 +289,7 @@ def setup_vcf_to_zarr(input_vcf_dir, output_zarr_dir, conversion_config):
                         conversion_config=conversion_config)
 
 
-def convert_to_zarr(input_vcf_path, output_zarr_path, conversion_config, benchmark_runner=None):
+def convert_to_zarr(input_vcf_path, output_zarr_path, conversion_config, benchmark_profiler=None):
     """ Converts the original data (VCF) to a Zarr format. Only converts a single VCF file.
     If a BenchmarkRunner is provided, the actual VCF to Zarr conversion process will be benchmarked.
     :param input_vcf_path: The input VCF file location
@@ -311,10 +311,25 @@ def convert_to_zarr(input_vcf_path, output_zarr_path, conversion_config, benchma
         # Get alt number
         if conversion_config.alt_number is None:
             print("[VCF-Zarr] Determining maximum number of ALT alleles by scaling all variants in the VCF file.")
+
+            if benchmark_profiler is not None:
+                benchmark_profiler.start_benchmark(operation_name="Read VCF file into memory for alt number")
+
             # Scan VCF file to find max number of alleles in any variant
             callset = allel.read_vcf(input_vcf_path, fields=['numalt'], log=sys.stdout)
+
+            if benchmark_profiler is not None:
+                benchmark_profiler.end_benchmark()
+
             numalt = callset['variants/numalt']
+
+            if benchmark_profiler is not None:
+                benchmark_profiler.start_benchmark(operation_name="Determine maximum alt number")
+
             alt_number = np.max(numalt)
+
+            if benchmark_profiler is not None:
+                benchmark_profiler.end_benchmark()
         else:
             print("[VCF-Zarr] Using alt number provided in configuration.")
             # Use the configuration-provided alt number
@@ -340,15 +355,15 @@ def convert_to_zarr(input_vcf_path, output_zarr_path, conversion_config, benchma
         else:
             raise ValueError("Unexpected compressor type specified.")
 
-        if benchmark_runner is not None:
-            benchmark_runner.start_benchmark(operation_name="Convert VCF to Zarr")
+        if benchmark_profiler is not None:
+            benchmark_profiler.start_benchmark(operation_name="Convert VCF to Zarr")
 
         # Perform the VCF to Zarr conversion
         allel.vcf_to_zarr(input_vcf_path, output_zarr_path, alt_number=alt_number, overwrite=True, fields=fields,
                           log=sys.stdout, compressor=compressor, chunk_length=chunk_length, chunk_width=chunk_width)
 
-        if benchmark_runner is not None:
-            benchmark_runner.end_benchmark()
+        if benchmark_profiler is not None:
+            benchmark_profiler.end_benchmark()
 
 
 GENOTYPE_ARRAY_NORMAL = 0

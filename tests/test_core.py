@@ -1,7 +1,12 @@
 import unittest
 from genomics_benchmarks.core import *
+from genomics_benchmarks.config import \
+    BenchmarkConfigurationRepresentation, \
+    VCFtoZarrConfigurationRepresentation, \
+    DataDirectoriesConfigurationRepresentation
 from time import sleep
 import os
+import shutil
 
 
 class TestCoreBenchmark(unittest.TestCase):
@@ -120,6 +125,87 @@ class TestCoreBenchmark(unittest.TestCase):
 
         # Delete *.psv file created when running benchmark
         if os.path.exists(psv_file):
+            os.remove(psv_file)
+
+    def test_benchmark_simple_aggregations(self):
+        test_dir = './tests_temp/'
+        benchmark_label = 'test_benchmark_simple_aggregations'
+        psv_file = '{}.psv'.format(benchmark_label)
+
+        # Remove the test data directory from any previous unit tests
+        if os.path.isdir(test_dir):
+            shutil.rmtree(test_dir)
+
+        # Remove the PSV file from any previous unit tests
+        if os.path.isfile(psv_file):
+            os.remove(psv_file)
+
+        vcf_to_zar_config = VCFtoZarrConfigurationRepresentation()
+        vcf_to_zar_config.enabled = True
+
+        bench_conf = BenchmarkConfigurationRepresentation()
+        bench_conf.vcf_to_zarr_config = vcf_to_zar_config
+        bench_conf.benchmark_number_runs = 1
+        bench_conf.benchmark_data_input = 'vcf'
+        bench_conf.benchmark_dataset = 'trio.2010_06.ychr.genotypes.vcf'
+        bench_conf.benchmark_aggregations = True
+
+        data_dirs = DataDirectoriesConfigurationRepresentation()
+        data_dirs.vcf_dir = './tests/data/'
+        data_dirs.zarr_dir_setup = './tests_temp/zarr/'
+        data_dirs.zarr_dir_benchmark = './tests_temp/zarr_benchmark/'
+        data_dirs.temp_dir = './tests_temp/temp/'
+
+        # Run the benchmark and ensure nothing fails
+        benchmark = Benchmark(bench_conf=bench_conf,
+                              data_dirs=data_dirs,
+                              benchmark_label='test_benchmark_simple_aggregations')
+        benchmark.run_benchmark()
+
+        # Ensure psv file was created
+        if os.path.exists(psv_file):
+            # Read file contents
+            with open(psv_file, 'r') as f:
+                psv_lines = [line.rstrip('\n') for line in f]
+
+            # Check line count of psv file
+            num_lines = len(psv_lines)
+            num_lines_expected = 10
+            self.assertEqual(num_lines_expected, num_lines, msg='Unexpected line count in resulting psv file.')
+
+            psv_operation_names = []
+
+            for psv_line in psv_lines:
+                line_split = psv_line.split('|')
+                line_cols_actual = len(line_split)
+                line_cols_expected = 4
+
+                # Ensure correct number of data columns exist for current line of data
+                self.assertEqual(line_cols_expected, line_cols_actual,
+                                 msg='Unexpected number of columns in resulting psv file')
+
+                operation_name = line_split[2]
+                psv_operation_names.append(operation_name)
+
+            # Ensure all aggregations were run
+            test_operation_names = ['Allele Count (All Samples)',
+                                    'Genotype Count: Heterozygous per Variant',
+                                    'Genotype Count: Homozygous per Variant',
+                                    'Genotype Count: Heterozygous per Sample',
+                                    'Genotype Count: Homozygous per Sample']
+
+            for test_operation_name in test_operation_names:
+                if test_operation_name not in psv_operation_names:
+                    self.fail(msg='Operation \"{}\" was not run during the benchmark.'.format(test_operation_name))
+        else:
+            self.fail(msg='Resulting psv file could not be found.')
+
+        # Remove the test data directory from any previous unit tests
+        if os.path.isdir(test_dir):
+            shutil.rmtree(test_dir)
+
+        # Remove the PSV file from this unit test
+        if os.path.isfile(psv_file):
             os.remove(psv_file)
 
 

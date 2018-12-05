@@ -98,8 +98,9 @@ benchmark_data_input = vcf
 # Specifies which dataset to use for the benchmarking process.
 benchmark_dataset =
 
-# Enables/disables running an allele count as part of the benchmarking process.
-benchmark_allele_count = True
+# Enables/disables running simple aggregations, such as allele count and genotype count, 
+# as part of the benchmarking process.
+benchmark_aggregations = True
 
 # Enables Principal Component Analysis (PCA) as part of the benchmarking process.
 benchmark_PCA = False

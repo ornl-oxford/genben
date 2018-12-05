@@ -140,12 +140,16 @@ class Benchmark:
                 # Ensure Zarr dataset exists and can be used for upcoming benchmarks
                 benchmark_zarr_path = os.path.join(self.benchmark_zarr_dir, self.benchmark_zarr_file)
                 if (benchmark_zarr_path != "") and (os.path.isdir(benchmark_zarr_path)):
-                    # TODO: Run remaining benchmarks (e.g. loading into memory, allele counting, PCA, etc.)
-                    pass
+                    # Load Zarr dataset into memory
+                    self._benchmark_load_zarr_dataset(benchmark_zarr_path)
+
+                    if self.bench_conf.benchmark_aggregations:
+                        self._benchmark_simple_aggregations(benchmark_zarr_path)
                 else:
                     # Zarr dataset doesn't exist. Print error message and exit
                     print("[Exec] Error: Zarr dataset could not be found for benchmarking.")
                     print("  - Zarr dataset location: {}".format(benchmark_zarr_path))
+                    exit(1)
 
     def _benchmark_convert_to_zarr(self):
         self.benchmark_zarr_dir = self.data_dirs.zarr_dir_benchmark
@@ -161,7 +165,7 @@ class Benchmark:
             data_service.convert_to_zarr(input_vcf_path=input_vcf_path,
                                          output_zarr_path=output_zarr_path,
                                          conversion_config=self.bench_conf.vcf_to_zarr_config,
-                                         benchmark_runner=self.benchmark_profiler)
+                                         benchmark_profiler=self.benchmark_profiler)
 
             self.benchmark_zarr_file = output_zarr_file
         else:
@@ -169,3 +173,44 @@ class Benchmark:
             print("  - Dataset file specified in configuration: {}".format(input_vcf_file))
             print("  - Expected file location: {}".format(input_vcf_path))
             exit(1)
+
+    def _benchmark_load_zarr_dataset(self, zarr_path):
+        self.benchmark_profiler.start_benchmark(operation_name="Load Zarr Dataset")
+        store = zarr.DirectoryStore(zarr_path)
+        callset = zarr.Group(store=store, read_only=True)
+        self.benchmark_profiler.end_benchmark()
+
+    def _benchmark_simple_aggregations(self, zarr_path):
+        # Load Zarr dataset
+        store = zarr.DirectoryStore(zarr_path)
+        callset = zarr.Group(store=store, read_only=True)
+
+        gtz = callset['calldata/GT']
+
+        # Setup genotype Dask array for computations
+        gt = allel.GenotypeDaskArray(gtz)
+
+        # Run benchmark for allele count
+        self.benchmark_profiler.start_benchmark(operation_name="Allele Count (All Samples)")
+        gt.count_alleles().compute()
+        self.benchmark_profiler.end_benchmark()
+
+        # Run benchmark for genotype count (heterozygous per variant)
+        self.benchmark_profiler.start_benchmark(operation_name="Genotype Count: Heterozygous per Variant")
+        gt.count_het(axis=1).compute()
+        self.benchmark_profiler.end_benchmark()
+
+        # Run benchmark for genotype count (homozygous per variant)
+        self.benchmark_profiler.start_benchmark(operation_name="Genotype Count: Homozygous per Variant")
+        gt.count_hom(axis=1).compute()
+        self.benchmark_profiler.end_benchmark()
+
+        # Run benchmark for genotype count (heterozygous per sample)
+        self.benchmark_profiler.start_benchmark(operation_name="Genotype Count: Heterozygous per Sample")
+        gt.count_het(axis=0).compute()
+        self.benchmark_profiler.end_benchmark()
+
+        # Run benchmark for genotype count (homozygous per sample)
+        self.benchmark_profiler.start_benchmark(operation_name="Genotype Count: Homozygous per Sample")
+        gt.count_hom(axis=0).compute()
+        self.benchmark_profiler.end_benchmark()
