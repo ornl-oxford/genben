@@ -9,7 +9,7 @@ import csv  # for writing results
 import logging
 import sys
 import shutil
-from benchmark import core, config, data_service
+from genomics_benchmarks import core, config, data_service
 
 
 def get_cli_arguments():
@@ -116,12 +116,4 @@ def _main():
         benchmark.run_benchmark()
     else:
         print("Error: Unexpected command specified. Exiting...")
-        sys.exit(1)
-
-
-def main():
-    try:
-        _main()
-    except KeyboardInterrupt:
-        print("Program interrupted. Exiting...")
         sys.exit(1)

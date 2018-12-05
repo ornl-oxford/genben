@@ -3,19 +3,19 @@ Benchmarking of systems for storage and compute over large-scale genomic data
 
 ## Setup and Execution  
 
-pip install genomics-benchmark
+pip install genomics-benchmarks
 
 Then:  
 
 1. Generate the initial, default configuration file:  
-$ genomics-benchmark config --output_config FILEPATH [-f]  
+$ genomics-benchmarks config --output_config FILEPATH [-f]  
 and then edit the config.ini file for the benchmarking environment.  
 
 2. Setup the benchmark data and the benchmark environment:  
-$ genomics-benchmark  setup --config_file FILEPATH  
+$ genomics-benchmarks  setup --config_file FILEPATH  
 
 3. Run the benchmark:   
-$ genomics-benchmark exec --config_file FILEPATH [--label LABEL]}
+$ genomics-benchmarks exec --config_file FILEPATH [--label LABEL]}
 
 ## Benchmark Structure 
 

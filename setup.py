@@ -35,15 +35,56 @@
 #  - git commit -a -m "post-release"
 #  - git push
 
-VERSION = '0.6.2'
+from setuptools import setup, find_packages
+
+VERSION = '0.1.0'
 
 DESCRIPTION = 'Python genomic benchmark suite'
+
 CLASSIFIERS = [
-    'Development Status :: 1 - Planning',
+    'Development Status :: 2 - Pre-Alpha',
     'Intended Audience :: Science/Research',
     'License :: OSI Approved :: MIT License',
     'Natural Language :: English',
     'Operating System :: OS Independent',
+    'Environment :: Console',
     'Programming Language :: Python :: 3',
     'Programming Language :: Python',
 ]
+
+with open('README.md', 'r') as f:
+    long_description = f.read()
+
+setup(
+    name='genomics-benchmarks',
+    version=VERSION,
+    description=DESCRIPTION,
+    long_description=long_description,
+    long_description_content_type='text/markdown',
+    url='https://github.com/ornl-oxford/genomics-benchmarks/',
+    license='MIT',
+    author='ornl-oxford',
+    packages=find_packages(),
+    include_package_data=True,
+    package_data={
+        'genomics_benchmarks': ['config/benchmark.conf.default']
+    },
+    classifiers=CLASSIFIERS,
+    install_requires=[
+        'matplotlib',
+        'numpy',
+        'pandas',
+        'scipy',
+        'dask',
+        'numcodecs',
+        'zarr',
+        'scikit-allel',
+        'perf',
+        'toolz'
+    ],
+    entry_points={
+        'console_scripts': [
+            'genomics-benchmarks = genomics_benchmarks:main'
+        ]
+    }
+)

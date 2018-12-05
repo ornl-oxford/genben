@@ -1,4 +1,15 @@
+matplotlib
+numpy
+pandas
+scipy
+seaborn
+jupyter
+notebook
+ipykernel
+dask
+numcodecs
+zarr
 scikit-allel
 perf
-numcodecs
-pandas
+mock ; python_version == '2.7'
+pathlib ; python_version == '2.7'

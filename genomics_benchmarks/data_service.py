@@ -2,7 +2,14 @@
 determines the runtime mode (dynamic vs. static); if dynamic, gets the benchmark data from the server,
 runs the benchmarks, and records the timer results. """
 
-import urllib.request
+import sys
+
+# Support Python 2.x and 3.x
+if sys.version_info[0] >= 3:
+    from urllib.request import urlretrieve
+else:
+    from urllib import urlretrieve
+
 from ftplib import FTP, FTP_TLS, error_perm
 import time  # for benchmark timer
 import csv  # for writing results
@@ -16,6 +23,7 @@ import numpy as np
 import zarr
 import numcodecs
 from numcodecs import Blosc
+from genomics_benchmarks import config
 
 import gzip
 import shutil
@@ -28,7 +36,10 @@ def create_directory_tree(path):
     :type path: str
     """
     path = str(path)  # Ensure path is in str format
-    pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+    try:
+        pathlib.Path(path).mkdir(parents=True)
+    except OSError:  # Catch if directory already exists
+        pass
 
 
 def remove_directory_tree(path):
@@ -158,7 +169,7 @@ def fetch_data_via_ftp_recursive(ftp, local_directory, remote_directory, remote_
 
 
 def fetch_file_from_url(url, local_file):
-    urllib.request.urlretrieve(url, local_file)
+    urlretrieve(url, local_file)
 
 
 def decompress_gzip(local_file_gz, local_file):

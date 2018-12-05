@@ -1,6 +1,7 @@
 from configparser import ConfigParser
 from shutil import copyfile
 import os.path
+from pkg_resources import resource_string
 from numcodecs import Blosc
 
 
@@ -244,7 +245,8 @@ def read_configuration(location):
 
 
 def generate_default_config_file(output_location, overwrite=False):
-    default_config_file_location = "doc/benchmark.conf.default"
+    # Get Default Config File Data as Package Resource
+    default_config_file_data = resource_string(__name__, 'config/benchmark.conf.default')
 
     if overwrite is None:
         overwrite = False
@@ -256,15 +258,12 @@ def generate_default_config_file(output_location, overwrite=False):
                 "[Config] Could not generate configuration file: file exists at specified destination and overwrite mode disabled.")
             return
 
-        if os.path.exists(default_config_file_location):
-            # Write the default configuration file to specified location
-            copyfile(default_config_file_location, output_location)
+        # Write the default configuration file to specified location
+        with open(output_location, 'wb') as output_file:
+            output_file.write(default_config_file_data)
 
-            # Check whether configuration file now exists and report status
-            if os.path.exists(output_location):
-                print("[Config] Configuration file has been generated successfully.")
-            else:
-                print("[Config] Configuration file was not generated.")
+        # Check whether configuration file now exists and report status
+        if os.path.exists(output_location):
+            print("[Config] Configuration file has been generated successfully.")
         else:
-            print("[Config] Default configuration file could not be found. File should be located at:\n\t{}"
-                  .format(default_config_file_location))
+            print("[Config] Configuration file was not generated.")

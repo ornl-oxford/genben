@@ -5,17 +5,21 @@
 """
 
 import unittest
-from unittest.mock import patch
+
+try:
+    from unittest.mock import patch
+except ImportError:
+    from mock import patch
 import sys
 import os
-from benchmark import cli, config
+from genomics_benchmarks import cli, config
 
 
 class TestConfigurationFile(unittest.TestCase):
 
     def test_reading_runtime_configuration(self):
         """ Tests that we can read values from the benchmark.conf and into a proper data structure. """
-        testargs = ["prog", "exec", "--config_file", "doc/benchmark.conf"]
+        testargs = ["prog", "exec", "--config_file", "tests/data/config_test_reading_runtime.conf"]
         with patch.object(sys, "argv", testargs):
             args = cli.get_cli_arguments()
             runtime_configuration = config.read_configuration(location=args["config_file"])
@@ -24,7 +28,7 @@ class TestConfigurationFile(unittest.TestCase):
 
     def test_generate_default_config(self):
         location = "./test_generate_default_config.conf"
-        location_expected = "./doc/benchmark.conf.default"
+        location_expected = "./genomics_benchmarks/config/benchmark.conf.default"
 
         # Remove any existing configuration files from previous unit testing (prevent false positive)
         if os.path.isfile(location):
@@ -35,10 +39,10 @@ class TestConfigurationFile(unittest.TestCase):
 
         if os.path.isfile(location) and os.path.isfile(location_expected):
             # Read generated config file contents
-            with open(file=location) as file:
+            with open(location) as file:
                 data_generated = file.readlines()
 
-            with open(file=location_expected) as file:
+            with open(location_expected) as file:
                 data_expected = file.readlines()
 
             # Check contents of default config file
@@ -55,7 +59,7 @@ class TestConfigurationFile(unittest.TestCase):
 
     def test_generate_default_config_no_overwrite(self):
         location = "./test_generate_default_config_no_overwrite.conf"
-        location_default = "./doc/benchmark.conf.default"
+        location_default = "./genomics_benchmarks/config/benchmark.conf.default"
         test_string = "Test data"
 
         # Remove any existing configuration files from previous unit testing (prevent false positive)
@@ -71,10 +75,10 @@ class TestConfigurationFile(unittest.TestCase):
 
         if os.path.isfile(location) and os.path.isfile(location_default):
             # Read generated config file contents
-            with open(file=location) as file:
+            with open(location) as file:
                 data_generated = file.readlines()
 
-            with open(file=location_default) as file:
+            with open(location_default) as file:
                 data_default = file.readlines()
 
             # Check contents of default config file
@@ -92,7 +96,7 @@ class TestConfigurationFile(unittest.TestCase):
 
     def test_generate_default_config_force(self):
         location = "./test_generate_default_config_force.conf"
-        location_expected = "./doc/benchmark.conf.default"
+        location_expected = "./genomics_benchmarks/config/benchmark.conf.default"
         test_string = "Test data"
 
         # Remove any existing configuration files from previous unit testing (prevent false positive)
@@ -108,11 +112,11 @@ class TestConfigurationFile(unittest.TestCase):
 
         if os.path.isfile(location) and os.path.isfile(location_expected):
             # Read generated config file contents
-            with open(file=location) as file:
+            with open(location) as file:
                 data_generated = file.readlines()
 
             # Read default config file contents
-            with open(file=location_expected) as file:
+            with open(location_expected) as file:
                 data_expected = file.readlines()
 
             # Check contents of default config file

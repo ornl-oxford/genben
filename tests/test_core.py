@@ -1,5 +1,5 @@
 import unittest
-from benchmark.core import *
+from genomics_benchmarks.core import *
 from time import sleep
 import os
 

@@ -11,7 +11,7 @@ import logging
 import os
 import pandas as pd
 from collections import OrderedDict
-from benchmark import config, data_service
+from genomics_benchmarks import config, data_service
 
 
 class BenchmarkResultsData:
