@@ -33,7 +33,7 @@ class TestDataServices(unittest.TestCase):
                     flag = False
                     break
             self.assertTrue(flag)
-        except error_temp:
+        except (error_temp, TimeoutError):
             pass  # Catch error with attempting to test FTP functionality on Travis CI
 
         # Remove the downloaded files
@@ -53,7 +53,7 @@ class TestDataServices(unittest.TestCase):
         try:
             data_service.fetch_file_from_url(remote_file_url, local_filename)
             self.assertTrue(os.path.isfile(local_filename), "No local file retrieved")
-        except error_temp:
+        except (error_temp, TimeoutError):
             pass  # Catch error with attempting to test FTP functionality on Travis CI
 
         # Remove the downloaded file
