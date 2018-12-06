@@ -33,7 +33,7 @@ class TestDataServices(unittest.TestCase):
                     flag = False
                     break
             self.assertTrue(flag)
-        except (error_temp, TimeoutError):
+        except (error_temp, IOError):
             pass  # Catch error with attempting to test FTP functionality on Travis CI
 
         # Remove the downloaded files
