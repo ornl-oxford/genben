@@ -366,12 +366,7 @@ def convert_to_zarr(input_vcf_path, output_zarr_path, conversion_config, benchma
             benchmark_profiler.end_benchmark()
 
 
-GENOTYPE_ARRAY_NORMAL = 0
-GENOTYPE_ARRAY_DASK = 1
-GENOTYPE_ARRAY_CHUNKED = 2
-
-
-def get_genotype_data(callset, genotype_array_type=GENOTYPE_ARRAY_DASK):
+def get_genotype_data(callset, genotype_array_type=config.GENOTYPE_ARRAY_DASK):
     genotype_ref_name = ''
 
     # Ensure 'calldata' is within the callset
@@ -386,11 +381,11 @@ def get_genotype_data(callset, genotype_array_type=GENOTYPE_ARRAY_DASK):
     else:
         return None
 
-    if genotype_array_type == GENOTYPE_ARRAY_NORMAL:
+    if genotype_array_type == config.GENOTYPE_ARRAY_NORMAL:
         return allel.GenotypeArray(callset['calldata'][genotype_ref_name])
-    elif genotype_array_type == GENOTYPE_ARRAY_DASK:
+    elif genotype_array_type == config.GENOTYPE_ARRAY_DASK:
         return allel.GenotypeDaskArray(callset['calldata'][genotype_ref_name])
-    elif genotype_array_type == GENOTYPE_ARRAY_CHUNKED:
+    elif genotype_array_type == config.GENOTYPE_ARRAY_CHUNKED:
         return allel.GenotypeChunkedArray(callset['calldata'][genotype_ref_name])
     else:
         return None

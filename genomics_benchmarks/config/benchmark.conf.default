@@ -103,7 +103,40 @@ benchmark_dataset =
 benchmark_aggregations = True
 
 # Enables Principal Component Analysis (PCA) as part of the benchmarking process.
-benchmark_PCA = False
+benchmark_pca = False
+
+# [PCA Benchmark] Specifies the number of principal components to keep when performing PCA analysis.
+pca_number_components = 10
+
+# [PCA Benchmark] Specifies the type of data scaling to apply to the data set.
+# Possible Values:
+#   - Standard:     0
+#   - Patterson:    1
+#   - None:         2
+pca_data_scaler = 1
+
+# [PCA Benchmark] Specifies the type of data array to use when loading the genotype data.
+# Possible Values:
+#   - Normal:   0
+#   - Dask:     1
+#   - Chunked:  2
+pca_genotype_array_type = 2
+
+# [PCA Benchmark] Sets the number of SNPs to use as a subset of the data set.
+# If the size of the data set is smaller than pca_subset_size, that will be used instead.
+pca_subset_size = 100000
+
+# [PCA Benchmark: Linkage Disequilibrium] Sets the number of iterations to perform LD pruning.
+pca_ld_pruning_number_iterations = 2
+
+# [PCA Benchmark: Linkage Disequilibrium] Sets the window size to use when performing LD pruning.
+pca_ld_pruning_size = 100
+
+# [PCA Benchmark: Linkage Disequilibrium] Sets the number of variants to advance when performing LD pruning.
+pca_ld_pruning_step = 20
+
+# [PCA Benchmark: Linkage Disequilibrium] Sets the maximum value of r^2 to include variants.
+pca_ld_pruning_threshold = 0.01
 
 [output]
 output_results = ~/benchmark/results.psv

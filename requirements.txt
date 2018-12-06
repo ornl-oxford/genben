@@ -10,7 +10,9 @@ dask
 numcodecs
 zarr
 toolz
+scikit-learn
 scikit-allel
 perf
+dask
 mock ; python_version == '2.7'
 pathlib ; python_version == '2.7'

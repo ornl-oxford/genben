@@ -8,6 +8,7 @@ import datetime
 import time  # for benchmark timer
 import csv  # for writing results
 import logging
+import numpy as np
 import os
 import pandas as pd
 from collections import OrderedDict
@@ -145,6 +146,9 @@ class Benchmark:
 
                     if self.bench_conf.benchmark_aggregations:
                         self._benchmark_simple_aggregations(benchmark_zarr_path)
+
+                    if self.bench_conf.benchmark_pca:
+                        self._benchmark_pca(benchmark_zarr_path)
                 else:
                     # Zarr dataset doesn't exist. Print error message and exit
                     print("[Exec] Error: Zarr dataset could not be found for benchmarking.")
@@ -214,3 +218,96 @@ class Benchmark:
         self.benchmark_profiler.start_benchmark(operation_name="Genotype Count: Homozygous per Sample")
         gt.count_hom(axis=0).compute()
         self.benchmark_profiler.end_benchmark()
+
+    def _benchmark_pca(self, zarr_path):
+        # Load Zarr dataset
+        store = zarr.DirectoryStore(zarr_path)
+        callset = zarr.Group(store=store, read_only=True)
+
+        # Get genotype data from data set
+        genotype_array_type = self.bench_conf.pca_genotype_array_type
+        g = data_service.get_genotype_data(callset=callset, genotype_array_type=genotype_array_type)
+
+        # Count alleles at each variant
+        self.benchmark_profiler.start_benchmark('PCA: Count alleles')
+        ac = g.count_alleles()[:]
+        self.benchmark_profiler.end_benchmark()
+
+        # Count number of multiallelic SNPs
+        self.benchmark_profiler.start_benchmark('PCA: Count multiallelic SNPs')
+        num_multiallelic_snps = np.count_nonzero(ac.max_allele() > 1)
+        self.benchmark_profiler.end_benchmark()
+
+        # Count number of biallelic singletons
+        self.benchmark_profiler.start_benchmark('PCA: Count biallelic singletons')
+        num_biallelic_singletons = np.count_nonzero((ac.max_allele() == 1) & ac.is_singleton(1))
+        self.benchmark_profiler.end_benchmark()
+
+        # Apply filtering to remove singletons and multiallelic SNPs
+        flt = (ac.max_allele() == 1) & (ac[:, :2].min(axis=1) > 1)
+        flt_count = np.count_nonzero(flt)
+        self.benchmark_profiler.start_benchmark('PCA: Remove singletons and multiallelic SNPs')
+        if flt_count > 0:
+            gf = g.compress(flt, axis=0)
+        else:
+            # Don't apply filtering
+            print('[Exec][PCA] Cannot remove singletons and multiallelic SNPs as no data would remain. Skipping...')
+            gf = g
+        self.benchmark_profiler.end_benchmark()
+
+        # Transform genotype data into 2-dim matrix
+        self.benchmark_profiler.start_benchmark('PCA: Transform genotype data for PCA')
+        gn = gf.to_n_alt()
+        self.benchmark_profiler.end_benchmark()
+
+        # Randomly choose subset of SNPs
+        n = min(gn.shape[0], self.bench_conf.pca_subset_size)
+        vidx = np.random.choice(gn.shape[0], n, replace=False)
+        vidx.sort()
+        gnr = gn.take(vidx, axis=0)
+
+        # Apply LD pruning to subset of SNPs
+        size = self.bench_conf.pca_ld_pruning_size
+        step = self.bench_conf.pca_ld_pruning_step
+        threshold = self.bench_conf.pca_ld_pruning_threshold
+        n_iter = self.bench_conf.pca_ld_pruning_number_iterations
+
+        self.benchmark_profiler.start_benchmark('PCA: Apply LD pruning')
+        gnu = self._pca_ld_prune(gnr, size=size, step=step, threshold=threshold, n_iter=n_iter)
+        self.benchmark_profiler.end_benchmark()
+
+        # If data is chunked, move to memory for PCA
+        self.benchmark_profiler.start_benchmark('PCA: Move data set to memory')
+        gnu = gnu[:]
+        self.benchmark_profiler.end_benchmark()
+
+        # Run PCA analysis
+        pca_num_components = self.bench_conf.pca_number_components
+        scaler = self.bench_conf.pca_data_scaler
+
+        # Run conventional PCA analysis
+        self.benchmark_profiler.start_benchmark(
+            'PCA: Run conventional PCA analysis (scaler: {})'.format(scaler if scaler is not None else 'none'))
+        allel.pca(gnu, n_components=pca_num_components, scaler=scaler)
+        self.benchmark_profiler.end_benchmark()
+
+        # Run randomized PCA analysis
+        self.benchmark_profiler.start_benchmark(
+            'PCA: Run randomized PCA analysis (scaler: {})'.format(scaler if scaler is not None else 'none'))
+        allel.randomized_pca(gnu, n_components=pca_num_components, scaler=scaler)
+        self.benchmark_profiler.end_benchmark()
+
+    @staticmethod
+    def _pca_ld_prune(gn, size, step, threshold=.1, n_iter=1):
+        blen = size * 10
+        for i in range(n_iter):
+            loc_unlinked = allel.locate_unlinked(gn, size=size, step=step, threshold=threshold, blen=blen)
+            n = np.count_nonzero(loc_unlinked)
+            n_remove = gn.shape[0] - n
+            print(
+                '[Exec][PCA][LD Prune] Iteration {}/{}: Retaining {} and removing {} variants.'.format(i + 1,
+                                                                                                       n_iter,
+                                                                                                       n,
+                                                                                                       n_remove))
+            gn = gn.compress(loc_unlinked, axis=0)
+        return gn

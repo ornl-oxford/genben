@@ -195,6 +195,20 @@ class VCFtoZarrConfigurationRepresentation:
 
 benchmark_data_input_types = ["vcf", "zarr"]
 
+PCA_DATA_SCALER_STANDARD = 0
+PCA_DATA_SCALER_PATTERSON = 1
+PCA_DATA_SCALER_NONE = 2
+benchmark_pca_data_scaler_types = {PCA_DATA_SCALER_STANDARD: 'standard',
+                                   PCA_DATA_SCALER_PATTERSON: 'patterson',
+                                   PCA_DATA_SCALER_NONE: None}
+
+GENOTYPE_ARRAY_NORMAL = 0
+GENOTYPE_ARRAY_DASK = 1
+GENOTYPE_ARRAY_CHUNKED = 2
+benchmark_pca_genotype_array_types = {GENOTYPE_ARRAY_NORMAL,
+                                      GENOTYPE_ARRAY_DASK,
+                                      GENOTYPE_ARRAY_CHUNKED}
+
 
 class BenchmarkConfigurationRepresentation:
     """ Utility class for object representation of the benchmark module's configuration. """
@@ -202,8 +216,18 @@ class BenchmarkConfigurationRepresentation:
     benchmark_data_input = "vcf"
     benchmark_dataset = ""
     benchmark_aggregations = False
-    benchmark_PCA = False
+    benchmark_pca = False
     vcf_to_zarr_config = None
+
+    # PCA-specific settings
+    pca_number_components = 10
+    pca_data_scaler = benchmark_pca_data_scaler_types[PCA_DATA_SCALER_PATTERSON]
+    pca_genotype_array_type = GENOTYPE_ARRAY_DASK
+    pca_subset_size = 100000
+    pca_ld_pruning_number_iterations = 2
+    pca_ld_pruning_size = 100
+    pca_ld_pruning_step = 20
+    pca_ld_pruning_threshold = 0.01
 
     def __init__(self, runtime_config=None):
         """
@@ -227,8 +251,65 @@ class BenchmarkConfigurationRepresentation:
                     self.benchmark_dataset = runtime_config.benchmark["benchmark_dataset"]
                 if "benchmark_aggregations" in runtime_config.benchmark:
                     self.benchmark_aggregations = config_str_to_bool(runtime_config.benchmark["benchmark_aggregations"])
-                if "benchmark_PCA" in runtime_config.benchmark:
-                    self.benchmark_PCA = config_str_to_bool(runtime_config.benchmark["benchmark_PCA"])
+                if "benchmark_pca" in runtime_config.benchmark:
+                    self.benchmark_pca = config_str_to_bool(runtime_config.benchmark["benchmark_pca"])
+                if "pca_number_components" in runtime_config.benchmark:
+                    pca_number_components_str = runtime_config.benchmark["pca_number_components"]
+                    if isint(pca_number_components_str) and (int(pca_number_components_str) > 0):
+                        self.pca_number_components = int(pca_number_components_str)
+                    else:
+                        raise ValueError("Invalid value for pca_number_components in configuration.\n"
+                                         "pca_number_components must be a valid integer greater than 0.")
+                if "pca_data_scaler" in runtime_config.benchmark:
+                    pca_data_scaler_str = runtime_config.benchmark["pca_data_scaler"]
+                    if isint(pca_data_scaler_str) and (int(pca_data_scaler_str) in benchmark_pca_data_scaler_types):
+                        self.pca_data_scaler = benchmark_pca_data_scaler_types[int(pca_data_scaler_str)]
+                    else:
+                        raise ValueError("Invalid value for pca_data_scaler in configuration.\n"
+                                         "pca_data_scaler must be a valid integer between 0 and 2")
+                if "pca_genotype_array_type" in runtime_config.benchmark:
+                    pca_genotype_array_type_str = runtime_config.benchmark["pca_genotype_array_type"]
+                    if isint(pca_genotype_array_type_str) and (
+                            int(pca_genotype_array_type_str) in benchmark_pca_genotype_array_types):
+                        self.pca_genotype_array_type = int(pca_genotype_array_type_str)
+                    else:
+                        raise ValueError("Invalid value for pca_genotype_array_type in configuration.\n"
+                                         "pca_genotype_array_type must be a valid integer between 0 and 2")
+                if "pca_subset_size" in runtime_config.benchmark:
+                    pca_subset_size_str = runtime_config.benchmark["pca_subset_size"]
+                    if isint(pca_subset_size_str) and (int(pca_subset_size_str) > 0):
+                        self.pca_subset_size = int(pca_subset_size_str)
+                    else:
+                        raise ValueError("Invalid value for pca_subset_size in configuration.\n"
+                                         "pca_subset_size must be a valid integer greater than 0.")
+                if "pca_ld_pruning_number_iterations" in runtime_config.benchmark:
+                    pca_ld_pruning_number_iterations_str = runtime_config.benchmark["pca_ld_pruning_number_iterations"]
+                    if isint(pca_ld_pruning_number_iterations_str) and (int(pca_ld_pruning_number_iterations_str) > 0):
+                        self.pca_ld_pruning_number_iterations = int(pca_ld_pruning_number_iterations_str)
+                    else:
+                        raise ValueError("Invalid value for pca_ld_pruning_number_iterations in configuration.\n"
+                                         "pca_ld_pruning_number_iterations must be a valid integer greater than 0.")
+                if "pca_ld_pruning_size" in runtime_config.benchmark:
+                    pca_ld_pruning_size_str = runtime_config.benchmark["pca_ld_pruning_size"]
+                    if isint(pca_ld_pruning_size_str) and (int(pca_ld_pruning_size_str) > 0):
+                        self.pca_ld_pruning_size = int(pca_ld_pruning_size_str)
+                    else:
+                        raise ValueError("Invalid value for pca_ld_pruning_size in configuration.\n"
+                                         "pca_ld_pruning_size must be a valid integer greater than 0.")
+                if "pca_ld_pruning_step" in runtime_config.benchmark:
+                    pca_ld_pruning_step_str = runtime_config.benchmark["pca_ld_pruning_step"]
+                    if isint(pca_ld_pruning_step_str) and (int(pca_ld_pruning_step_str) > 0):
+                        self.pca_ld_pruning_step = int(pca_ld_pruning_step_str)
+                    else:
+                        raise ValueError("Invalid value for pca_ld_pruning_step in configuration.\n"
+                                         "pca_ld_pruning_step must be a valid integer greater than 0.")
+                if "pca_ld_pruning_threshold" in runtime_config.benchmark:
+                    pca_ld_pruning_threshold_str = runtime_config.benchmark["pca_ld_pruning_threshold"]
+                    if isfloat(pca_ld_pruning_threshold_str) and (float(pca_ld_pruning_threshold_str) > 0):
+                        self.pca_ld_pruning_threshold = float(pca_ld_pruning_threshold_str)
+                    else:
+                        raise ValueError("Invalid value for pca_ld_pruning_threshold in configuration.\n"
+                                         "pca_ld_pruning_threshold must be a valid float greater than 0.")
 
             # Add the VCF to Zarr Conversion Configuration Data
             self.vcf_to_zarr_config = VCFtoZarrConfigurationRepresentation(runtime_config=runtime_config)
