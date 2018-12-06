@@ -41,25 +41,6 @@ class TestDataServices(unittest.TestCase):
             if os.path.isfile(file):
                 os.remove(file)
 
-    def test_fetch_file_from_url(self):
-        """ Tests fetching a data to be used in benchmarking from a remote URL. """
-        remote_file_url = "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/pilot_data/release/2010_07/trio/snps/trio.2010_06.ychr.genotypes.vcf.gz"
-        local_filename = "trio.2010_06.ychr.genotypes.vcf.gz"
-
-        # Attempt to remove local file in case a previous unit test failed to do so (prevents false positive)
-        if os.path.isfile(local_filename):
-            os.remove(local_filename)
-
-        try:
-            data_service.fetch_file_from_url(remote_file_url, local_filename)
-            self.assertTrue(os.path.isfile(local_filename), "No local file retrieved")
-        except (error_temp, TimeoutError):
-            pass  # Catch error with attempting to test FTP functionality on Travis CI
-
-        # Remove the downloaded file
-        if os.path.isfile(local_filename):
-            os.remove(local_filename)
-
     def test_decompress_gzip(self):
         """ Tests decompressing the fetched file. """
         local_file_gz = "./tests/data/trio.2010_06.ychr.genotypes.vcf.gz"
