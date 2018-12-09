@@ -20,7 +20,7 @@ Install genomics-benchmarks:
 Run genomics-benchmarks:
   1. Generate the initial, default configuration file:
       ``$ genomics-benchmarks config --output_config FILEPATH [-f]``
-     and then edit the newly-created INI file for the benchmarking environment.
+      and then edit the newly-created INI file for the benchmarking environment.
 
   2. Setup the benchmark data and the benchmark environment:
       ``$ genomics-benchmarks setup --config_file FILEPATH``

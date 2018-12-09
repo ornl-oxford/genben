@@ -42,7 +42,7 @@ VERSION = '0.1.0'
 DESCRIPTION = 'Python genomic benchmark suite'
 
 CLASSIFIERS = [
-    'Development Status :: 2 - Pre-Alpha',
+    'Development Status :: 4 - Beta',
     'Intended Audience :: Science/Research',
     'License :: OSI Approved :: MIT License',
     'Natural Language :: English',
@@ -52,7 +52,7 @@ CLASSIFIERS = [
     'Programming Language :: Python',
 ]
 
-with open('README.md', 'r') as f:
+with open('README.rst', 'r') as f:
     long_description = f.read()
 
 setup(
@@ -60,7 +60,6 @@ setup(
     version=VERSION,
     description=DESCRIPTION,
     long_description=long_description,
-    long_description_content_type='text/markdown',
     url='https://github.com/ornl-oxford/genomics-benchmarks/',
     license='MIT',
     author='ornl-oxford',
