@@ -77,9 +77,12 @@ setup(
         'dask',
         'numcodecs',
         'zarr',
+        'scikit-learn',
         'scikit-allel',
         'perf',
-        'toolz'
+        'toolz',
+        'mock;python_version=="2.7"',
+        'pathlib;python_version=="2.7"'
     ],
     entry_points={
         'console_scripts': [
