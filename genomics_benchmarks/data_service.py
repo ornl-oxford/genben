@@ -17,6 +17,7 @@ import logging
 import os.path
 import pathlib
 import allel
+import allel.io.vcf_read
 import sys
 import functools
 import numpy as np
@@ -337,13 +338,13 @@ def convert_to_zarr(input_vcf_path, output_zarr_path, conversion_config, benchma
         print("[VCF-Zarr] Alt number: {}".format(alt_number))
 
         # Get chunk length
-        chunk_length = allel.vcf_read.DEFAULT_CHUNK_LENGTH
+        chunk_length = allel.io.vcf_read.DEFAULT_CHUNK_LENGTH
         if conversion_config.chunk_length is not None:
             chunk_length = conversion_config.chunk_length
         print("[VCF-Zarr] Chunk length: {}".format(chunk_length))
 
         # Get chunk width
-        chunk_width = allel.vcf_read.DEFAULT_CHUNK_WIDTH
+        chunk_width = allel.io.vcf_read.DEFAULT_CHUNK_WIDTH
         if conversion_config.chunk_width is not None:
             chunk_width = conversion_config.chunk_width
         print("[VCF-Zarr] Chunk width: {}".format(chunk_width))
