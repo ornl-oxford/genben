@@ -189,10 +189,9 @@ class Benchmark:
         store = zarr.DirectoryStore(zarr_path)
         callset = zarr.Group(store=store, read_only=True)
 
-        gtz = callset['calldata/GT']
-
-        # Setup genotype Dask array for computations
-        gt = allel.GenotypeDaskArray(gtz)
+        # Get genotype data from data set
+        genotype_array_type = self.bench_conf.genotype_array_type
+        gt = data_service.get_genotype_data(callset=callset, genotype_array_type=genotype_array_type)
 
         # Run benchmark for allele count
         self.benchmark_profiler.start_benchmark(operation_name="Allele Count (All Samples)")
@@ -225,12 +224,12 @@ class Benchmark:
         callset = zarr.Group(store=store, read_only=True)
 
         # Get genotype data from data set
-        genotype_array_type = self.bench_conf.pca_genotype_array_type
-        g = data_service.get_genotype_data(callset=callset, genotype_array_type=genotype_array_type)
+        genotype_array_type = self.bench_conf.genotype_array_type
+        gt = data_service.get_genotype_data(callset=callset, genotype_array_type=genotype_array_type)
 
         # Count alleles at each variant
         self.benchmark_profiler.start_benchmark('PCA: Count alleles')
-        ac = g.count_alleles()[:]
+        ac = gt.count_alleles()[:]
         self.benchmark_profiler.end_benchmark()
 
         # Count number of multiallelic SNPs
@@ -248,11 +247,11 @@ class Benchmark:
         flt_count = np.count_nonzero(flt)
         self.benchmark_profiler.start_benchmark('PCA: Remove singletons and multiallelic SNPs')
         if flt_count > 0:
-            gf = g.compress(flt, axis=0)
+            gf = gt.compress(flt, axis=0)
         else:
             # Don't apply filtering
             print('[Exec][PCA] Cannot remove singletons and multiallelic SNPs as no data would remain. Skipping...')
-            gf = g
+            gf = gt
         self.benchmark_profiler.end_benchmark()
 
         # Transform genotype data into 2-dim matrix

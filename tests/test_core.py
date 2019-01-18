@@ -231,7 +231,7 @@ class TestCoreBenchmark(unittest.TestCase):
         bench_conf.benchmark_dataset = 'trio.2010_06.ychr.genotypes.vcf'
         bench_conf.benchmark_pca = True
         bench_conf.pca_data_scaler = config.benchmark_pca_data_scaler_types[config.PCA_DATA_SCALER_PATTERSON]
-        bench_conf.pca_genotype_array_type = config.GENOTYPE_ARRAY_CHUNKED
+        bench_conf.genotype_array_type = config.GENOTYPE_ARRAY_CHUNKED
 
         data_dirs = DataDirectoriesConfigurationRepresentation()
         data_dirs.vcf_dir = './tests/data/'

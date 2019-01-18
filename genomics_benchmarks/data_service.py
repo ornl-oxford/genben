@@ -382,11 +382,13 @@ def get_genotype_data(callset, genotype_array_type=config.GENOTYPE_ARRAY_DASK):
     else:
         return None
 
+    gtz = callset['calldata'][genotype_ref_name]
+
     if genotype_array_type == config.GENOTYPE_ARRAY_NORMAL:
-        return allel.GenotypeArray(callset['calldata'][genotype_ref_name])
+        return allel.GenotypeArray(gtz)
     elif genotype_array_type == config.GENOTYPE_ARRAY_DASK:
-        return allel.GenotypeDaskArray(callset['calldata'][genotype_ref_name])
+        return allel.GenotypeDaskArray(gtz)
     elif genotype_array_type == config.GENOTYPE_ARRAY_CHUNKED:
-        return allel.GenotypeChunkedArray(callset['calldata'][genotype_ref_name])
+        return allel.GenotypeChunkedArray(gtz)
     else:
         return None
