@@ -199,28 +199,53 @@ class Benchmark:
 
     def _benchmark_simple_aggregations(self, gt):
         # Run benchmark for allele count
-        self.benchmark_profiler.start_benchmark(operation_name="Allele Count (All Samples)")
-        gt.count_alleles().compute()
+        benchmark_allele_count_name = "Allele Count (All Samples)"
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_allele_count_name)
+            gt.count_alleles().compute()
+        else:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_allele_count_name)
+            gt.count_alleles()
         self.benchmark_profiler.end_benchmark()
 
         # Run benchmark for genotype count (heterozygous per variant)
-        self.benchmark_profiler.start_benchmark(operation_name="Genotype Count: Heterozygous per Variant")
-        gt.count_het(axis=1).compute()
+        benchmark_gt_count_het_per_var_name = "Genotype Count: Heterozygous per Variant"
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_gt_count_het_per_var_name)
+            gt.count_het(axis=1).compute()
+        else:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_gt_count_het_per_var_name)
+            gt.count_het(axis=1)
         self.benchmark_profiler.end_benchmark()
 
         # Run benchmark for genotype count (homozygous per variant)
-        self.benchmark_profiler.start_benchmark(operation_name="Genotype Count: Homozygous per Variant")
-        gt.count_hom(axis=1).compute()
+        benchmark_gt_count_hom_per_var_name = "Genotype Count: Homozygous per Variant"
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_gt_count_hom_per_var_name)
+            gt.count_hom(axis=1).compute()
+        else:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_gt_count_hom_per_var_name)
+            gt.count_hom(axis=1)
         self.benchmark_profiler.end_benchmark()
 
         # Run benchmark for genotype count (heterozygous per sample)
-        self.benchmark_profiler.start_benchmark(operation_name="Genotype Count: Heterozygous per Sample")
-        gt.count_het(axis=0).compute()
+        benchmark_gt_count_het_per_sample = "Genotype Count: Heterozygous per Sample"
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_gt_count_het_per_sample)
+            gt.count_het(axis=0).compute()
+        else:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_gt_count_het_per_sample)
+            gt.count_het(axis=0)
         self.benchmark_profiler.end_benchmark()
 
         # Run benchmark for genotype count (homozygous per sample)
-        self.benchmark_profiler.start_benchmark(operation_name="Genotype Count: Homozygous per Sample")
-        gt.count_hom(axis=0).compute()
+        benchmark_gt_hom_per_sample = "Genotype Count: Homozygous per Sample"
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_gt_hom_per_sample)
+            gt.count_hom(axis=0).compute()
+        else:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_gt_hom_per_sample)
+            gt.count_hom(axis=0)
         self.benchmark_profiler.end_benchmark()
 
     def _benchmark_pca(self, gt):
