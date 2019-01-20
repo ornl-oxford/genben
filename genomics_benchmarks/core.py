@@ -142,13 +142,18 @@ class Benchmark:
                 benchmark_zarr_path = os.path.join(self.benchmark_zarr_dir, self.benchmark_zarr_file)
                 if (benchmark_zarr_path != "") and (os.path.isdir(benchmark_zarr_path)):
                     # Load Zarr dataset into memory
-                    self._benchmark_load_zarr_dataset(benchmark_zarr_path)
+                    callset = self._benchmark_load_zarr_dataset(benchmark_zarr_path)
+
+                    # Create genotype data from data set
+                    gt = self._benchmark_create_genotype_array(callset)
 
                     if self.bench_conf.benchmark_aggregations:
-                        self._benchmark_simple_aggregations(benchmark_zarr_path)
+                        # Run simple aggregations benchmark
+                        self._benchmark_simple_aggregations(gt)
 
                     if self.bench_conf.benchmark_pca:
-                        self._benchmark_pca(benchmark_zarr_path)
+                        # Run PCA benchmark
+                        self._benchmark_pca(gt)
                 else:
                     # Zarr dataset doesn't exist. Print error message and exit
                     print("[Exec] Error: Zarr dataset could not be found for benchmarking.")
@@ -183,16 +188,16 @@ class Benchmark:
         store = zarr.DirectoryStore(zarr_path)
         callset = zarr.Group(store=store, read_only=True)
         self.benchmark_profiler.end_benchmark()
+        return callset
 
-    def _benchmark_simple_aggregations(self, zarr_path):
-        # Load Zarr dataset
-        store = zarr.DirectoryStore(zarr_path)
-        callset = zarr.Group(store=store, read_only=True)
-
-        # Get genotype data from data set
+    def _benchmark_create_genotype_array(self, callset):
         genotype_array_type = self.bench_conf.genotype_array_type
+        self.benchmark_profiler.start_benchmark(operation_name="Create Genotype Array")
         gt = data_service.get_genotype_data(callset=callset, genotype_array_type=genotype_array_type)
+        self.benchmark_profiler.end_benchmark()
+        return gt
 
+    def _benchmark_simple_aggregations(self, gt):
         # Run benchmark for allele count
         self.benchmark_profiler.start_benchmark(operation_name="Allele Count (All Samples)")
         gt.count_alleles().compute()
@@ -218,15 +223,7 @@ class Benchmark:
         gt.count_hom(axis=0).compute()
         self.benchmark_profiler.end_benchmark()
 
-    def _benchmark_pca(self, zarr_path):
-        # Load Zarr dataset
-        store = zarr.DirectoryStore(zarr_path)
-        callset = zarr.Group(store=store, read_only=True)
-
-        # Get genotype data from data set
-        genotype_array_type = self.bench_conf.genotype_array_type
-        gt = data_service.get_genotype_data(callset=callset, genotype_array_type=genotype_array_type)
-
+    def _benchmark_pca(self, gt):
         # Count alleles at each variant
         self.benchmark_profiler.start_benchmark('PCA: Count alleles')
         ac = gt.count_alleles()[:]

@@ -170,7 +170,7 @@ class TestCoreBenchmark(unittest.TestCase):
 
             # Check line count of psv file
             num_lines = len(psv_lines)
-            num_lines_expected = 10
+            num_lines_expected = 11
             self.assertEqual(num_lines_expected, num_lines, msg='Unexpected line count in resulting psv file.')
 
             psv_operation_names = []
@@ -253,7 +253,7 @@ class TestCoreBenchmark(unittest.TestCase):
 
             # Check line count of psv file
             num_lines = len(psv_lines)
-            num_lines_expected = 14
+            num_lines_expected = 15
             self.assertEqual(num_lines_expected, num_lines, msg='Unexpected line count in resulting psv file.')
 
             psv_operation_names = []
