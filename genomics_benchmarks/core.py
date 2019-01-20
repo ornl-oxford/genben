@@ -262,15 +262,19 @@ class Benchmark:
         vidx.sort()
         gnr = gn.take(vidx, axis=0)
 
-        # Apply LD pruning to subset of SNPs
-        size = self.bench_conf.pca_ld_pruning_size
-        step = self.bench_conf.pca_ld_pruning_step
-        threshold = self.bench_conf.pca_ld_pruning_threshold
-        n_iter = self.bench_conf.pca_ld_pruning_number_iterations
+        if self.bench_conf.genotype_array_type != config.GENOTYPE_ARRAY_DASK:
+            # Apply LD pruning to subset of SNPs
+            size = self.bench_conf.pca_ld_pruning_size
+            step = self.bench_conf.pca_ld_pruning_step
+            threshold = self.bench_conf.pca_ld_pruning_threshold
+            n_iter = self.bench_conf.pca_ld_pruning_number_iterations
 
-        self.benchmark_profiler.start_benchmark('PCA: Apply LD pruning')
-        gnu = self._pca_ld_prune(gnr, size=size, step=step, threshold=threshold, n_iter=n_iter)
-        self.benchmark_profiler.end_benchmark()
+            self.benchmark_profiler.start_benchmark('PCA: Apply LD pruning')
+            gnu = self._pca_ld_prune(gnr, size=size, step=step, threshold=threshold, n_iter=n_iter)
+            self.benchmark_profiler.end_benchmark()
+        else:
+            print('[Exec][PCA] Cannot apply LD pruning because Dask genotype arrays do not support this operation.')
+            gnu = gnr
 
         # If data is chunked, move to memory for PCA
         self.benchmark_profiler.start_benchmark('PCA: Move data set to memory')
