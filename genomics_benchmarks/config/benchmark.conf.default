@@ -94,6 +94,15 @@ benchmark_data_input = vcf
 # Specifies which dataset to use for the benchmarking process.
 benchmark_dataset =
 
+# Specifies the number of variants to include from the dataset input for benchmarking.
+# If a value of -1 is passed, then all variants will be included.
+benchmark_num_variants = -1
+
+# Specifies the number of samples to include from the dataset input for benchmarking.
+# If a value of -1 is passed, then all samples will be included.
+benchmark_num_samples = -1
+
+
 # Enables/disables running simple aggregations, such as allele count and genotype count, 
 # as part of the benchmarking process.
 benchmark_aggregations = True
