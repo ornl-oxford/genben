@@ -224,6 +224,7 @@ class BenchmarkConfigurationRepresentation:
     pca_number_components = 10
     pca_data_scaler = benchmark_pca_data_scaler_types[PCA_DATA_SCALER_PATTERSON]
     pca_subset_size = 100000
+    pca_ld_enabled = False
     pca_ld_pruning_number_iterations = 2
     pca_ld_pruning_size = 100
     pca_ld_pruning_step = 20
@@ -282,6 +283,8 @@ class BenchmarkConfigurationRepresentation:
                     else:
                         raise ValueError("Invalid value for pca_subset_size in configuration.\n"
                                          "pca_subset_size must be a valid integer greater than 0.")
+                if "pca_ld_enabled" in runtime_config.benchmark:
+                    self.pca_ld_enabled = config_str_to_bool(runtime_config.benchmark["pca_ld_enabled"])
                 if "pca_ld_pruning_number_iterations" in runtime_config.benchmark:
                     pca_ld_pruning_number_iterations_str = runtime_config.benchmark["pca_ld_pruning_number_iterations"]
                     if isint(pca_ld_pruning_number_iterations_str) and (int(pca_ld_pruning_number_iterations_str) > 0):

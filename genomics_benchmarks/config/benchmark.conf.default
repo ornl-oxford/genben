@@ -122,6 +122,10 @@ pca_data_scaler = 1
 # If the size of the data set is smaller than pca_subset_size, that will be used instead.
 pca_subset_size = 100000
 
+# [PCA Benchmark: Linkage Disequilibrium] Specifies whether to enable or disable LD pruning operation.
+# Note: The LD pruning implementation is not parallelized and may not scale well when running on multi-node systems.
+pca_ld_enabled = False
+
 # [PCA Benchmark: Linkage Disequilibrium] Sets the number of iterations to perform LD pruning.
 pca_ld_pruning_number_iterations = 2
 
