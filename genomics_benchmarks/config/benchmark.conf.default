@@ -101,6 +101,13 @@ benchmark_aggregations = True
 # Enables Principal Component Analysis (PCA) as part of the benchmarking process.
 benchmark_pca = False
 
+# Specifies the type of data array to use when loading the genotype data for benchmarking.
+# Possible Values:
+#   - Normal:   0
+#   - Dask:     1
+#   - Chunked:  2
+genotype_array_type = 2
+
 # [PCA Benchmark] Specifies the number of principal components to keep when performing PCA analysis.
 pca_number_components = 10
 
@@ -110,13 +117,6 @@ pca_number_components = 10
 #   - Patterson:    1
 #   - None:         2
 pca_data_scaler = 1
-
-# [PCA Benchmark] Specifies the type of data array to use when loading the genotype data.
-# Possible Values:
-#   - Normal:   0
-#   - Dask:     1
-#   - Chunked:  2
-pca_genotype_array_type = 2
 
 # [PCA Benchmark] Sets the number of SNPs to use as a subset of the data set.
 # If the size of the data set is smaller than pca_subset_size, that will be used instead.

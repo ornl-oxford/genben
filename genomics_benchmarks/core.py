@@ -142,13 +142,18 @@ class Benchmark:
                 benchmark_zarr_path = os.path.join(self.benchmark_zarr_dir, self.benchmark_zarr_file)
                 if (benchmark_zarr_path != "") and (os.path.isdir(benchmark_zarr_path)):
                     # Load Zarr dataset into memory
-                    self._benchmark_load_zarr_dataset(benchmark_zarr_path)
+                    callset = self._benchmark_load_zarr_dataset(benchmark_zarr_path)
+
+                    # Create genotype data from data set
+                    gt = self._benchmark_create_genotype_array(callset)
 
                     if self.bench_conf.benchmark_aggregations:
-                        self._benchmark_simple_aggregations(benchmark_zarr_path)
+                        # Run simple aggregations benchmark
+                        self._benchmark_simple_aggregations(gt)
 
                     if self.bench_conf.benchmark_pca:
-                        self._benchmark_pca(benchmark_zarr_path)
+                        # Run PCA benchmark
+                        self._benchmark_pca(gt)
                 else:
                     # Zarr dataset doesn't exist. Print error message and exit
                     print("[Exec] Error: Zarr dataset could not be found for benchmarking.")
@@ -183,54 +188,70 @@ class Benchmark:
         store = zarr.DirectoryStore(zarr_path)
         callset = zarr.Group(store=store, read_only=True)
         self.benchmark_profiler.end_benchmark()
+        return callset
 
-    def _benchmark_simple_aggregations(self, zarr_path):
-        # Load Zarr dataset
-        store = zarr.DirectoryStore(zarr_path)
-        callset = zarr.Group(store=store, read_only=True)
+    def _benchmark_create_genotype_array(self, callset):
+        genotype_array_type = self.bench_conf.genotype_array_type
+        self.benchmark_profiler.start_benchmark(operation_name="Create Genotype Array")
+        gt = data_service.get_genotype_data(callset=callset, genotype_array_type=genotype_array_type)
+        self.benchmark_profiler.end_benchmark()
+        return gt
 
-        gtz = callset['calldata/GT']
-
-        # Setup genotype Dask array for computations
-        gt = allel.GenotypeDaskArray(gtz)
-
+    def _benchmark_simple_aggregations(self, gt):
         # Run benchmark for allele count
-        self.benchmark_profiler.start_benchmark(operation_name="Allele Count (All Samples)")
-        gt.count_alleles().compute()
+        benchmark_allele_count_name = "Allele Count (All Samples)"
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_allele_count_name)
+            gt.count_alleles().compute()
+        else:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_allele_count_name)
+            gt.count_alleles()
         self.benchmark_profiler.end_benchmark()
 
         # Run benchmark for genotype count (heterozygous per variant)
-        self.benchmark_profiler.start_benchmark(operation_name="Genotype Count: Heterozygous per Variant")
-        gt.count_het(axis=1).compute()
+        benchmark_gt_count_het_per_var_name = "Genotype Count: Heterozygous per Variant"
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_gt_count_het_per_var_name)
+            gt.count_het(axis=1).compute()
+        else:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_gt_count_het_per_var_name)
+            gt.count_het(axis=1)
         self.benchmark_profiler.end_benchmark()
 
         # Run benchmark for genotype count (homozygous per variant)
-        self.benchmark_profiler.start_benchmark(operation_name="Genotype Count: Homozygous per Variant")
-        gt.count_hom(axis=1).compute()
+        benchmark_gt_count_hom_per_var_name = "Genotype Count: Homozygous per Variant"
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_gt_count_hom_per_var_name)
+            gt.count_hom(axis=1).compute()
+        else:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_gt_count_hom_per_var_name)
+            gt.count_hom(axis=1)
         self.benchmark_profiler.end_benchmark()
 
         # Run benchmark for genotype count (heterozygous per sample)
-        self.benchmark_profiler.start_benchmark(operation_name="Genotype Count: Heterozygous per Sample")
-        gt.count_het(axis=0).compute()
+        benchmark_gt_count_het_per_sample = "Genotype Count: Heterozygous per Sample"
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_gt_count_het_per_sample)
+            gt.count_het(axis=0).compute()
+        else:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_gt_count_het_per_sample)
+            gt.count_het(axis=0)
         self.benchmark_profiler.end_benchmark()
 
         # Run benchmark for genotype count (homozygous per sample)
-        self.benchmark_profiler.start_benchmark(operation_name="Genotype Count: Homozygous per Sample")
-        gt.count_hom(axis=0).compute()
+        benchmark_gt_hom_per_sample = "Genotype Count: Homozygous per Sample"
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_gt_hom_per_sample)
+            gt.count_hom(axis=0).compute()
+        else:
+            self.benchmark_profiler.start_benchmark(operation_name=benchmark_gt_hom_per_sample)
+            gt.count_hom(axis=0)
         self.benchmark_profiler.end_benchmark()
 
-    def _benchmark_pca(self, zarr_path):
-        # Load Zarr dataset
-        store = zarr.DirectoryStore(zarr_path)
-        callset = zarr.Group(store=store, read_only=True)
-
-        # Get genotype data from data set
-        genotype_array_type = self.bench_conf.pca_genotype_array_type
-        g = data_service.get_genotype_data(callset=callset, genotype_array_type=genotype_array_type)
-
+    def _benchmark_pca(self, gt):
         # Count alleles at each variant
         self.benchmark_profiler.start_benchmark('PCA: Count alleles')
-        ac = g.count_alleles()[:]
+        ac = gt.count_alleles()[:]
         self.benchmark_profiler.end_benchmark()
 
         # Count number of multiallelic SNPs
@@ -248,11 +269,11 @@ class Benchmark:
         flt_count = np.count_nonzero(flt)
         self.benchmark_profiler.start_benchmark('PCA: Remove singletons and multiallelic SNPs')
         if flt_count > 0:
-            gf = g.compress(flt, axis=0)
+            gf = gt.compress(flt, axis=0)
         else:
             # Don't apply filtering
             print('[Exec][PCA] Cannot remove singletons and multiallelic SNPs as no data would remain. Skipping...')
-            gf = g
+            gf = gt
         self.benchmark_profiler.end_benchmark()
 
         # Transform genotype data into 2-dim matrix
@@ -266,15 +287,19 @@ class Benchmark:
         vidx.sort()
         gnr = gn.take(vidx, axis=0)
 
-        # Apply LD pruning to subset of SNPs
-        size = self.bench_conf.pca_ld_pruning_size
-        step = self.bench_conf.pca_ld_pruning_step
-        threshold = self.bench_conf.pca_ld_pruning_threshold
-        n_iter = self.bench_conf.pca_ld_pruning_number_iterations
+        if self.bench_conf.genotype_array_type != config.GENOTYPE_ARRAY_DASK:
+            # Apply LD pruning to subset of SNPs
+            size = self.bench_conf.pca_ld_pruning_size
+            step = self.bench_conf.pca_ld_pruning_step
+            threshold = self.bench_conf.pca_ld_pruning_threshold
+            n_iter = self.bench_conf.pca_ld_pruning_number_iterations
 
-        self.benchmark_profiler.start_benchmark('PCA: Apply LD pruning')
-        gnu = self._pca_ld_prune(gnr, size=size, step=step, threshold=threshold, n_iter=n_iter)
-        self.benchmark_profiler.end_benchmark()
+            self.benchmark_profiler.start_benchmark('PCA: Apply LD pruning')
+            gnu = self._pca_ld_prune(gnr, size=size, step=step, threshold=threshold, n_iter=n_iter)
+            self.benchmark_profiler.end_benchmark()
+        else:
+            print('[Exec][PCA] Cannot apply LD pruning because Dask genotype arrays do not support this operation.')
+            gnu = gnr
 
         # If data is chunked, move to memory for PCA
         self.benchmark_profiler.start_benchmark('PCA: Move data set to memory')

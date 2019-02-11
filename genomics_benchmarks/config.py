@@ -205,7 +205,7 @@ benchmark_pca_data_scaler_types = {PCA_DATA_SCALER_STANDARD: 'standard',
 GENOTYPE_ARRAY_NORMAL = 0
 GENOTYPE_ARRAY_DASK = 1
 GENOTYPE_ARRAY_CHUNKED = 2
-benchmark_pca_genotype_array_types = {GENOTYPE_ARRAY_NORMAL,
+genotype_array_types = {GENOTYPE_ARRAY_NORMAL,
                                       GENOTYPE_ARRAY_DASK,
                                       GENOTYPE_ARRAY_CHUNKED}
 
@@ -217,12 +217,12 @@ class BenchmarkConfigurationRepresentation:
     benchmark_dataset = ""
     benchmark_aggregations = False
     benchmark_pca = False
+    genotype_array_type = GENOTYPE_ARRAY_DASK
     vcf_to_zarr_config = None
 
     # PCA-specific settings
     pca_number_components = 10
     pca_data_scaler = benchmark_pca_data_scaler_types[PCA_DATA_SCALER_PATTERSON]
-    pca_genotype_array_type = GENOTYPE_ARRAY_DASK
     pca_subset_size = 100000
     pca_ld_pruning_number_iterations = 2
     pca_ld_pruning_size = 100
@@ -253,6 +253,14 @@ class BenchmarkConfigurationRepresentation:
                     self.benchmark_aggregations = config_str_to_bool(runtime_config.benchmark["benchmark_aggregations"])
                 if "benchmark_pca" in runtime_config.benchmark:
                     self.benchmark_pca = config_str_to_bool(runtime_config.benchmark["benchmark_pca"])
+                if "genotype_array_type" in runtime_config.benchmark:
+                    genotype_array_type_str = runtime_config.benchmark["genotype_array_type"]
+                    if isint(genotype_array_type_str) and (
+                            int(genotype_array_type_str) in genotype_array_types):
+                        self.genotype_array_type = int(genotype_array_type_str)
+                    else:
+                        raise ValueError("Invalid value for genotype_array_type in configuration.\n"
+                                         "genotype_array_type must be a valid integer between 0 and 2")
                 if "pca_number_components" in runtime_config.benchmark:
                     pca_number_components_str = runtime_config.benchmark["pca_number_components"]
                     if isint(pca_number_components_str) and (int(pca_number_components_str) > 0):
@@ -267,14 +275,6 @@ class BenchmarkConfigurationRepresentation:
                     else:
                         raise ValueError("Invalid value for pca_data_scaler in configuration.\n"
                                          "pca_data_scaler must be a valid integer between 0 and 2")
-                if "pca_genotype_array_type" in runtime_config.benchmark:
-                    pca_genotype_array_type_str = runtime_config.benchmark["pca_genotype_array_type"]
-                    if isint(pca_genotype_array_type_str) and (
-                            int(pca_genotype_array_type_str) in benchmark_pca_genotype_array_types):
-                        self.pca_genotype_array_type = int(pca_genotype_array_type_str)
-                    else:
-                        raise ValueError("Invalid value for pca_genotype_array_type in configuration.\n"
-                                         "pca_genotype_array_type must be a valid integer between 0 and 2")
                 if "pca_subset_size" in runtime_config.benchmark:
                     pca_subset_size_str = runtime_config.benchmark["pca_subset_size"]
                     if isint(pca_subset_size_str) and (int(pca_subset_size_str) > 0):
