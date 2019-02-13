@@ -315,20 +315,30 @@ class Benchmark:
         n = min(gn.shape[0], self.bench_conf.pca_subset_size)
         vidx = np.random.choice(gn.shape[0], n, replace=False)
         vidx.sort()
-        gnr = gn.take(vidx, axis=0)
-
-        if self.bench_conf.genotype_array_type != config.GENOTYPE_ARRAY_DASK:
-            # Apply LD pruning to subset of SNPs
-            size = self.bench_conf.pca_ld_pruning_size
-            step = self.bench_conf.pca_ld_pruning_step
-            threshold = self.bench_conf.pca_ld_pruning_threshold
-            n_iter = self.bench_conf.pca_ld_pruning_number_iterations
-
-            self.benchmark_profiler.start_benchmark('PCA: Apply LD pruning')
-            gnu = self._pca_ld_prune(gnr, size=size, step=step, threshold=threshold, n_iter=n_iter)
-            self.benchmark_profiler.end_benchmark()
+        if self.bench_conf.genotype_array_type in [config.GENOTYPE_ARRAY_NORMAL, config.GENOTYPE_ARRAY_CHUNKED]:
+            gnr = gn.take(vidx, axis=0)
+        elif self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            gnr = gn[vidx]  # Use indexing workaround since Dask Array's take() method is not working properly
         else:
-            print('[Exec][PCA] Cannot apply LD pruning because Dask genotype arrays do not support this operation.')
+            print('[Exec][PCA] Error: Unspecified genotype array type specified.')
+            exit(1)
+
+        if self.bench_conf.pca_ld_enabled:
+            if self.bench_conf.genotype_array_type != config.GENOTYPE_ARRAY_DASK:
+                # Apply LD pruning to subset of SNPs
+                size = self.bench_conf.pca_ld_pruning_size
+                step = self.bench_conf.pca_ld_pruning_step
+                threshold = self.bench_conf.pca_ld_pruning_threshold
+                n_iter = self.bench_conf.pca_ld_pruning_number_iterations
+
+                self.benchmark_profiler.start_benchmark('PCA: Apply LD pruning')
+                gnu = self._pca_ld_prune(gnr, size=size, step=step, threshold=threshold, n_iter=n_iter)
+                self.benchmark_profiler.end_benchmark()
+            else:
+                print('[Exec][PCA] Cannot apply LD pruning because Dask genotype arrays do not support this operation.')
+                gnu = gnr
+        else:
+            print('[Exec][PCA] LD pruning disabled. Skipping this operation.')
             gnu = gnr
 
         # If data is chunked, move to memory for PCA

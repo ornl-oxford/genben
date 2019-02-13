@@ -232,6 +232,7 @@ class TestCoreBenchmark(unittest.TestCase):
         bench_conf.benchmark_pca = True
         bench_conf.pca_data_scaler = config.benchmark_pca_data_scaler_types[config.PCA_DATA_SCALER_PATTERSON]
         bench_conf.genotype_array_type = config.GENOTYPE_ARRAY_CHUNKED
+        bench_conf.pca_ld_enabled = True
 
         data_dirs = DataDirectoriesConfigurationRepresentation()
         data_dirs.vcf_dir = './tests/data/'
