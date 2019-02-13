@@ -315,7 +315,13 @@ class Benchmark:
         n = min(gn.shape[0], self.bench_conf.pca_subset_size)
         vidx = np.random.choice(gn.shape[0], n, replace=False)
         vidx.sort()
-        gnr = gn.take(vidx, axis=0)
+        if self.bench_conf.genotype_array_type in [config.GENOTYPE_ARRAY_NORMAL, config.GENOTYPE_ARRAY_CHUNKED]:
+            gnr = gn.take(vidx, axis=0)
+        elif self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            gnr = gn[vidx]  # Use indexing workaround since Dask Array's take() method is not working properly
+        else:
+            print('[Exec][PCA] Error: Unspecified genotype array type specified.')
+            exit(1)
 
         if self.bench_conf.pca_ld_enabled:
             if self.bench_conf.genotype_array_type != config.GENOTYPE_ARRAY_DASK:
