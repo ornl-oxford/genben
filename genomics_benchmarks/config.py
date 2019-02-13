@@ -206,8 +206,8 @@ GENOTYPE_ARRAY_NORMAL = 0
 GENOTYPE_ARRAY_DASK = 1
 GENOTYPE_ARRAY_CHUNKED = 2
 genotype_array_types = {GENOTYPE_ARRAY_NORMAL,
-                                      GENOTYPE_ARRAY_DASK,
-                                      GENOTYPE_ARRAY_CHUNKED}
+                        GENOTYPE_ARRAY_DASK,
+                        GENOTYPE_ARRAY_CHUNKED}
 
 
 class BenchmarkConfigurationRepresentation:
@@ -215,6 +215,8 @@ class BenchmarkConfigurationRepresentation:
     benchmark_number_runs = 5
     benchmark_data_input = "vcf"
     benchmark_dataset = ""
+    benchmark_num_variants = -1
+    benchmark_num_samples = -1
     benchmark_aggregations = False
     benchmark_pca = False
     genotype_array_type = GENOTYPE_ARRAY_DASK
@@ -250,6 +252,24 @@ class BenchmarkConfigurationRepresentation:
                         self.benchmark_data_input = benchmark_data_input_temp
                 if "benchmark_dataset" in runtime_config.benchmark:
                     self.benchmark_dataset = runtime_config.benchmark["benchmark_dataset"]
+                if "benchmark_num_variants" in runtime_config.benchmark:
+                    benchmark_num_variants_str = runtime_config.benchmark["benchmark_num_variants"]
+                    if isint(benchmark_num_variants_str) and (
+                            int(benchmark_num_variants_str) == -1 or int(benchmark_num_variants_str) >= 1):
+                        self.benchmark_num_variants = int(benchmark_num_variants_str)
+                    else:
+                        raise ValueError("Invalid value for benchmark_num_variants in configuration.\n"
+                                         "benchmark_num_variants must be a valid integer greater than 1.\n"
+                                         "Alternatively, a value of -1 can be specified to include all variants.")
+                if "benchmark_num_samples" in runtime_config.benchmark:
+                    benchmark_num_samples_str = runtime_config.benchmark["benchmark_num_samples"]
+                    if isint(benchmark_num_samples_str) and (
+                            int(benchmark_num_samples_str) == -1 or int(benchmark_num_samples_str) >= 1):
+                        self.benchmark_num_samples = int(benchmark_num_samples_str)
+                    else:
+                        raise ValueError("Invalid value for benchmark_num_samples in configuration.\n"
+                                         "benchmark_num_samples must be a valid integer greater than 1.\n"
+                                         "Alternatively, a value of -1 can be specified to include all samples.")
                 if "benchmark_aggregations" in runtime_config.benchmark:
                     self.benchmark_aggregations = config_str_to_bool(runtime_config.benchmark["benchmark_aggregations"])
                 if "benchmark_pca" in runtime_config.benchmark:

@@ -145,7 +145,9 @@ class Benchmark:
                     callset = self._benchmark_load_zarr_dataset(benchmark_zarr_path)
 
                     # Create genotype data from data set
-                    gt = self._benchmark_create_genotype_array(callset)
+                    num_variants = self.bench_conf.benchmark_num_variants
+                    num_samples = self.bench_conf.benchmark_num_samples
+                    gt = self._benchmark_create_genotype_array(callset, num_variants, num_samples)
 
                     if self.bench_conf.benchmark_aggregations:
                         # Run simple aggregations benchmark
@@ -190,11 +192,39 @@ class Benchmark:
         self.benchmark_profiler.end_benchmark()
         return callset
 
-    def _benchmark_create_genotype_array(self, callset):
+    def _benchmark_create_genotype_array(self, callset, num_variants=None, num_samples=None):
         genotype_array_type = self.bench_conf.genotype_array_type
+
+        # Create the genotype array and benchmark its execution time
         self.benchmark_profiler.start_benchmark(operation_name="Create Genotype Array")
         gt = data_service.get_genotype_data(callset=callset, genotype_array_type=genotype_array_type)
         self.benchmark_profiler.end_benchmark()
+
+        # If the number of variants or samples were specified, limit the genotype data returned
+        if num_variants is not None and num_variants != -1:
+            print('[Exec][Create Genotype Array] Limiting number of variants to {}.'.format(num_variants))
+            # Ensure specified number of variants is not larger than the number of variants available
+            if num_variants > gt.n_variants:
+                print(
+                    '[Exec][Create Genotype Array] Warning: number of variants specified ({}) exceeds the number available ({}). Including all variants.'.format(
+                        num_variants, gt.n_variants))
+            else:
+                gt = gt[:num_variants, :]
+        else:
+            print('[Exec][Create Genotype Array] Including all variants ({}).'.format(gt.n_variants))
+
+        if num_samples is not None and num_samples != -1:
+            print('[Exec][Create Genotype Array] Limiting number of samples to {}.'.format(num_samples))
+            # Ensure specified number of samples is not larger than the number of samples available
+            if num_samples > gt.n_samples:
+                print(
+                    '[Exec][Create Genotype Array] Warning: number of samples specified ({}) exceeds the number available ({}). Including all samples.'.format(
+                        num_samples, gt.n_samples))
+            else:
+                gt = gt[:, :num_samples]
+        else:
+            print('[Exec][Create Genotype Array] Including all samples ({}).'.format(gt.n_samples))
+
         return gt
 
     def _benchmark_simple_aggregations(self, gt):
