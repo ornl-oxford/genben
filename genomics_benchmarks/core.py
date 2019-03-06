@@ -6,13 +6,12 @@ import allel
 import zarr
 import datetime
 import time  # for benchmark timer
-import csv  # for writing results
-import logging
 import numpy as np
 import os
 import pandas as pd
 from collections import OrderedDict
 from genomics_benchmarks import config, data_service
+from influxdb import InfluxDBClient
 
 
 class BenchmarkResultsData:
@@ -22,10 +21,10 @@ class BenchmarkResultsData:
     exec_time = None
 
     def to_dict(self):
-        return OrderedDict([("Log Timestamp", datetime.datetime.fromtimestamp(self.start_time)),
-                            ("Run Number", self.run_number),
-                            ("Operation", self.operation_name),
-                            ("Execution Time", self.exec_time)])
+        return OrderedDict([("log_timestamp", self.start_time),
+                            ("run_number", self.run_number),
+                            ("operation", self.operation_name),
+                            ("execution_time", self.exec_time)])
 
     def to_pandas(self):
         data = self.to_dict()
@@ -33,12 +32,54 @@ class BenchmarkResultsData:
         df.index.name = '#'
         return df
 
+    def to_csv(self, filename, delimiter='|'):
+        filename = str(filename)
+
+        psv_header = not os.path.isfile(filename)
+
+        # Open the output file in append mode
+        with open(filename, "a") as psv_file:
+            pd_results = self.to_pandas()
+            pd_results.to_csv(psv_file, sep=delimiter, header=psv_header, index=False)
+
+    def to_influxdb(self, host='localhost', port=8086, username='root', password='root', db_name=None,
+                    benchmark_label=None, additional_tags=None):
+        influx_client = InfluxDBClient(host=host,
+                                       port=port,
+                                       username=username,
+                                       password=password,
+                                       database=db_name)
+        influx_client.create_database(dbname=db_name)
+
+        json_body = [{
+            'measurement': 'benchmark',
+            'tags': {
+                'operation_name': self.operation_name,
+                'benchmark_label': benchmark_label
+            },
+            'time': self.start_time,
+            'fields': {
+                'run_number': self.run_number,
+                'execution_time': self.exec_time
+            }
+        }]
+
+        # Add any additional tags if they were provided
+        if additional_tags is not None:
+            if type(additional_tags) is dict:
+                json_body[0]['tags'].update(additional_tags)
+            else:
+                raise TypeError('Additional tags should be within a dict object.')
+
+        return influx_client.write_points(json_body)
+
 
 class BenchmarkProfiler:
     benchmark_running = False
 
-    def __init__(self, benchmark_label):
+    def __init__(self, output_config, benchmark_label):
         self.results = BenchmarkResultsData()
+        self.output_config = output_config
         self.benchmark_label = benchmark_label
 
     def set_run_number(self, run_number):
@@ -52,39 +93,44 @@ class BenchmarkProfiler:
             self.benchmark_running = True
 
             # Start the benchmark timer
-            self.results.start_time = time.time()
+            self.results.start_time = datetime.datetime.utcnow()
 
     def end_benchmark(self):
         if self.benchmark_running:
-            end_time = time.time()
+            end_time = datetime.datetime.utcnow()
 
             # Calculate the execution time from start and end times
-            self.results.exec_time = end_time - self.results.start_time
+            self.results.exec_time = (end_time - self.results.start_time).total_seconds()
 
             # Save benchmark results
-            self._record_runtime(self.results, "{}.psv".format(self.benchmark_label))
+            self._record_runtime()
 
             self.benchmark_running = False
 
     def get_benchmark_results(self):
         return self.results
 
-    def _record_runtime(self, benchmark_results, output_filename):
+    def _record_runtime(self):
         """
         Records the benchmark results data entry to the specified PSV file.
-        :param benchmark_results: BenchmarkResultsData object containing the benchmark results data
-        :param output_filename: Which file to output the benchmark results to
-        :type benchmark_results: BenchmarkResultsData
-        :type output_filename: str
         """
-        output_filename = str(output_filename)
+        if self.output_config.output_csv_enabled:
+            self.results.to_csv(filename='{}.csv'.format(self.benchmark_label),
+                                delimiter=self.output_config.output_csv_delimiter)
 
-        psv_header = not os.path.isfile(output_filename)
+        if self.output_config.output_influxdb_enabled:
+            influxdb_additional_tags = {
+                'benchmark_group': self.output_config.output_influxdb_benchmark_group,
+                'device_name': self.output_config.output_influxdb_device_name
+            }
 
-        # Open the output file in append mode
-        with open(output_filename, "a") as psv_file:
-            pd_results = benchmark_results.to_pandas()
-            pd_results.to_csv(psv_file, sep="|", header=psv_header, index=False)
+            self.results.to_influxdb(host=self.output_config.output_influxdb_host,
+                                     port=self.output_config.output_influxdb_port,
+                                     username=self.output_config.output_influxdb_username,
+                                     password=self.output_config.output_influxdb_password,
+                                     db_name=self.output_config.output_influxdb_database_name,
+                                     benchmark_label=self.benchmark_label,
+                                     additional_tags=influxdb_additional_tags)
 
 
 class Benchmark:
@@ -105,7 +151,8 @@ class Benchmark:
         self.data_dirs = data_dirs
         self.benchmark_label = benchmark_label
 
-        self.benchmark_profiler = BenchmarkProfiler(benchmark_label=self.benchmark_label)
+        self.benchmark_profiler = BenchmarkProfiler(output_config=self.bench_conf.results_output_config,
+                                                    benchmark_label=self.benchmark_label)
 
     def run_benchmark(self):
         """

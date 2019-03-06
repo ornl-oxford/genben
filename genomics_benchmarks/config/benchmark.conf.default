@@ -146,3 +146,34 @@ pca_ld_pruning_step = 20
 
 # [PCA Benchmark: Linkage Disequilibrium] Sets the maximum value of r^2 to include variants.
 pca_ld_pruning_threshold = 0.01
+
+
+[output.csv]
+# Specifies whether to enable/disable benchmark results output to CSV-style file.
+enabled = True
+
+# Specifies which delimiter to use to separate fields within each row of data
+delimiter = |
+
+
+[output.influxdb]
+# Specifies whether to enable/disable benchmark results output to a InfluxDB server
+enabled = False
+
+# Host/IP address and port of the machine running InfluxDB
+host = localhost
+port = 8086
+
+# Username and password credentials to login to InfluxDB instance
+username = root
+password = root
+
+# Name of database to store benchmark results
+database_name = benchmark
+
+# (Optional) Tag that can be used to group/organize different benchmark results
+benchmark_group =
+
+# (Optional) Tag that can be used to specify which machine is running the benchmark.
+# This option can be useful for matching benchmark results when pushing data from multiple machines.
+device_name =
