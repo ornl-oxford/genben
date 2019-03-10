@@ -75,6 +75,7 @@ setup(
         'pandas',
         'scipy',
         'dask',
+        'distributed',
         'numcodecs',
         'zarr',
         'scikit-learn',
