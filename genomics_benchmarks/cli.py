@@ -9,7 +9,7 @@ import csv  # for writing results
 import logging
 import sys
 import shutil
-from genomics_benchmarks import core, config, data_service, daskutils
+from genomics_benchmarks import core, config, data_service, dask_utils
 
 
 def get_cli_arguments():
@@ -112,9 +112,9 @@ def _main():
 
         # Connect to Dask scheduler if enabled
         if dask_config.enabled:
-            dask_utils = daskutils.DaskUtils()
-            dask_utils.connect_to_scheduler(address=dask_config.scheduler_address,
-                                            port=dask_config.scheduler_port)
+            du = dask_utils.DaskUtils()
+            du.connect_to_scheduler(address=dask_config.scheduler_address,
+                                    port=dask_config.scheduler_port)
 
         # Get Benchmark module settings from runtime config
         benchmark_config = config.BenchmarkConfigurationRepresentation(runtime_config)
