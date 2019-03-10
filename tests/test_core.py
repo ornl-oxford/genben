@@ -3,6 +3,7 @@ from genomics_benchmarks.core import *
 from genomics_benchmarks.config import \
     BenchmarkConfigurationRepresentation, \
     VCFtoZarrConfigurationRepresentation, \
+    OutputConfigurationRepresentation, \
     DataDirectoriesConfigurationRepresentation
 from time import sleep
 import os
@@ -11,9 +12,14 @@ import shutil
 
 class TestCoreBenchmark(unittest.TestCase):
     def test_benchmark_profiler_results(self):
+        # Set up output results config for test
+        output_config = OutputConfigurationRepresentation()
+        output_config.output_csv_enabled = False
+        output_config.output_influxdb_enabled = False
+
         # Setup Benchmark Profiler object
         profiler_label = 'test_benchmark_profiler_results'
-        profiler = BenchmarkProfiler(profiler_label)
+        profiler = BenchmarkProfiler(output_config, profiler_label)
 
         # Run a few mock benchmarks
         benchmark_times = [1, 2, 10]
@@ -25,7 +31,7 @@ class TestCoreBenchmark(unittest.TestCase):
 
             # Run the mock benchmark, measuring time to run sleep command
             profiler.start_benchmark(operation_name)
-            time.sleep(benchmark_time)
+            sleep(benchmark_time)
             profiler.end_benchmark()
 
             # Grab benchmark results
@@ -41,21 +47,22 @@ class TestCoreBenchmark(unittest.TestCase):
 
             i += 1
 
-        # Delete *.psv file created when running benchmark
-        psv_file = '{}.psv'.format(profiler_label)
-        if os.path.exists(psv_file):
-            os.remove(psv_file)
+    def test_benchmark_results_csv(self):
+        # Set up output results config for test
+        output_config = OutputConfigurationRepresentation()
+        output_config.output_csv_enabled = True
+        output_config.output_csv_delimiter = ','
+        output_config.output_influxdb_enabled = False
 
-    def test_benchmark_results_psv(self):
         # Setup Benchmark Profiler object
-        profiler_label = 'test_benchmark_results_psv'
+        profiler_label = 'test_benchmark_results_csv'
 
-        # Delete *.psv file created from any previous unit testing
-        psv_file = '{}.psv'.format(profiler_label)
-        if os.path.exists(psv_file):
-            os.remove(psv_file)
+        # Delete *.csv file created from any previous unit testing
+        csv_file = '{}.csv'.format(profiler_label)
+        if os.path.exists(csv_file):
+            os.remove(csv_file)
 
-        profiler = BenchmarkProfiler(profiler_label)
+        profiler = BenchmarkProfiler(output_config, profiler_label)
 
         operation_name_format = 'Sleep {} seconds'
 
@@ -69,82 +76,88 @@ class TestCoreBenchmark(unittest.TestCase):
 
             # Run the mock benchmark, measuring time to run sleep command
             profiler.start_benchmark(operation_name)
-            time.sleep(benchmark_time)
+            sleep(benchmark_time)
             profiler.end_benchmark()
 
             i += 1
 
-        # Read results psv file
-        psv_file = '{}.psv'.format(profiler_label)
+        # Read results csv file
+        csv_file = '{}.csv'.format(profiler_label)
 
-        # Ensure psv file was created
-        if os.path.exists(psv_file):
+        # Ensure csv file was created
+        if os.path.exists(csv_file):
             # Read file contents
-            with open(psv_file, 'r') as f:
-                psv_lines = [line.rstrip('\n') for line in f]
+            with open(csv_file, 'r') as f:
+                csv_lines = [line.rstrip('\n') for line in f]
 
-            # Check line count of psv file. Line count should be equal to number of benchmarks run + 1 (for header)
-            num_lines = len(psv_lines)
+            # Check line count of csv file. Line count should be equal to number of benchmarks run + 1 (for header)
+            num_lines = len(csv_lines)
             num_lines_expected = len(benchmark_times) + 1
-            self.assertEqual(num_lines_expected, num_lines, msg='Line count in resulting psv file is incorrect.')
+            self.assertEqual(num_lines_expected, num_lines, msg='Line count in resulting csv file is incorrect.')
 
-            # Ensure header (first line) of psv file is correct
-            header_expected = 'Log Timestamp|Run Number|Operation|Execution Time'
-            header_actual = psv_lines[0]
+            # Ensure header (first line) of csv file is correct
+            header_expected = 'log_timestamp,run_number,operation,execution_time'
+            header_actual = csv_lines[0]
             self.assertEqual(header_expected, header_actual)
 
-            # Ensure contents (benchmark data) of psv file is correct
+            # Ensure contents (benchmark data) of csv file is correct
             i = 1
             for line_number in range(1, num_lines):
-                content = psv_lines[line_number].split('|')
+                content = csv_lines[line_number].split(',')
 
                 # Ensure column count is correct
                 num_columns = len(content)
                 num_columns_expected = 4
-                self.assertEqual(num_columns_expected, num_columns, msg='Column count for psv data is incorrect.')
+                self.assertEqual(num_columns_expected, num_columns, msg='Column count for csv data is incorrect.')
 
                 # Ensure run number is correct
-                run_number_psv = int(content[1])
+                run_number_csv = int(content[1])
                 run_number_expected = i
-                self.assertEqual(run_number_expected, run_number_psv, msg='Run number is incorrect.')
+                self.assertEqual(run_number_expected, run_number_csv, msg='Run number is incorrect.')
 
                 # Ensure operation name is correct
-                operation_name_psv = content[2]
+                operation_name_csv = content[2]
                 operation_name_expected = operation_name_format.format(benchmark_times[i - 1])
-                self.assertEqual(operation_name_expected, operation_name_psv, msg='Operation name is incorrect.')
+                self.assertEqual(operation_name_expected, operation_name_csv, msg='Operation name is incorrect.')
 
                 # Ensure execution time is correct
-                execution_time_psv = int(float(content[3]))  # Convert to int to truncate decimals
+                execution_time_csv = int(float(content[3]))  # Convert to int to truncate decimals
                 execution_time_expected = benchmark_times[i - 1]
-                self.assertEqual(execution_time_expected, execution_time_psv, msg='Execution time is incorrect')
+                self.assertEqual(execution_time_expected, execution_time_csv, msg='Execution time is incorrect')
 
                 i += 1
 
         else:
-            self.fail(msg='Resulting psv file could not be found.')
+            self.fail(msg='Resulting csv file could not be found.')
 
-        # Delete *.psv file created when running benchmark
-        if os.path.exists(psv_file):
-            os.remove(psv_file)
+        # Delete *.csv file created when running benchmark
+        if os.path.exists(csv_file):
+            os.remove(csv_file)
 
     def test_benchmark_simple_aggregations(self):
         test_dir = './tests_temp/'
         benchmark_label = 'test_benchmark_simple_aggregations'
-        psv_file = '{}.psv'.format(benchmark_label)
+        csv_file = '{}.csv'.format(benchmark_label)
 
         # Remove the test data directory from any previous unit tests
         if os.path.isdir(test_dir):
             shutil.rmtree(test_dir)
 
-        # Remove the PSV file from any previous unit tests
-        if os.path.isfile(psv_file):
-            os.remove(psv_file)
+        # Remove the csv file from any previous unit tests
+        if os.path.isfile(csv_file):
+            os.remove(csv_file)
 
         vcf_to_zar_config = VCFtoZarrConfigurationRepresentation()
         vcf_to_zar_config.enabled = True
 
+        output_config = OutputConfigurationRepresentation()
+        output_config.output_csv_enabled = True
+        output_config.output_csv_delimiter = ','
+        output_config.output_influxdb_enabled = False
+
         bench_conf = BenchmarkConfigurationRepresentation()
         bench_conf.vcf_to_zarr_config = vcf_to_zar_config
+        bench_conf.results_output_config = output_config
         bench_conf.benchmark_number_runs = 1
         bench_conf.benchmark_data_input = 'vcf'
         bench_conf.benchmark_dataset = 'trio.2010_06.ychr.genotypes.vcf'
@@ -162,30 +175,30 @@ class TestCoreBenchmark(unittest.TestCase):
                               benchmark_label='test_benchmark_simple_aggregations')
         benchmark.run_benchmark()
 
-        # Ensure psv file was created
-        if os.path.exists(psv_file):
+        # Ensure csv file was created
+        if os.path.exists(csv_file):
             # Read file contents
-            with open(psv_file, 'r') as f:
-                psv_lines = [line.rstrip('\n') for line in f]
+            with open(csv_file, 'r') as f:
+                csv_lines = [line.rstrip('\n') for line in f]
 
-            # Check line count of psv file
-            num_lines = len(psv_lines)
+            # Check line count of csv file
+            num_lines = len(csv_lines)
             num_lines_expected = 11
-            self.assertEqual(num_lines_expected, num_lines, msg='Unexpected line count in resulting psv file.')
+            self.assertEqual(num_lines_expected, num_lines, msg='Unexpected line count in resulting csv file.')
 
-            psv_operation_names = []
+            csv_operation_names = []
 
-            for psv_line in psv_lines:
-                line_split = psv_line.split('|')
+            for csv_line in csv_lines:
+                line_split = csv_line.split(',')
                 line_cols_actual = len(line_split)
                 line_cols_expected = 4
 
                 # Ensure correct number of data columns exist for current line of data
                 self.assertEqual(line_cols_expected, line_cols_actual,
-                                 msg='Unexpected number of columns in resulting psv file')
+                                 msg='Unexpected number of columns in resulting csv file')
 
                 operation_name = line_split[2]
-                psv_operation_names.append(operation_name)
+                csv_operation_names.append(operation_name)
 
             # Ensure all aggregations were run
             test_operation_names = ['Allele Count (All Samples)',
@@ -195,37 +208,43 @@ class TestCoreBenchmark(unittest.TestCase):
                                     'Genotype Count: Homozygous per Sample']
 
             for test_operation_name in test_operation_names:
-                if test_operation_name not in psv_operation_names:
+                if test_operation_name not in csv_operation_names:
                     self.fail(msg='Operation \"{}\" was not run during the benchmark.'.format(test_operation_name))
         else:
-            self.fail(msg='Resulting psv file could not be found.')
+            self.fail(msg='Resulting csv file could not be found.')
 
         # Remove the test data directory from any previous unit tests
         if os.path.isdir(test_dir):
             shutil.rmtree(test_dir)
 
-        # Remove the PSV file from this unit test
-        if os.path.isfile(psv_file):
-            os.remove(psv_file)
+        # Remove the csv file from this unit test
+        if os.path.isfile(csv_file):
+            os.remove(csv_file)
 
     def test_benchmark_pca(self):
         test_dir = './tests_temp/'
         benchmark_label = 'test_benchmark_pca'
-        psv_file = '{}.psv'.format(benchmark_label)
+        csv_file = '{}.csv'.format(benchmark_label)
 
         # Remove the test data directory from any previous unit tests
         if os.path.isdir(test_dir):
             shutil.rmtree(test_dir)
 
-        # Remove the PSV file from any previous unit tests
-        if os.path.isfile(psv_file):
-            os.remove(psv_file)
+        # Remove the csv file from any previous unit tests
+        if os.path.isfile(csv_file):
+            os.remove(csv_file)
 
         vcf_to_zar_config = VCFtoZarrConfigurationRepresentation()
         vcf_to_zar_config.enabled = True
 
+        output_config = OutputConfigurationRepresentation()
+        output_config.output_csv_enabled = True
+        output_config.output_csv_delimiter = ','
+        output_config.output_influxdb_enabled = False
+
         bench_conf = BenchmarkConfigurationRepresentation()
         bench_conf.vcf_to_zarr_config = vcf_to_zar_config
+        bench_conf.results_output_config = output_config
         bench_conf.benchmark_number_runs = 1
         bench_conf.benchmark_data_input = 'vcf'
         bench_conf.benchmark_dataset = 'trio.2010_06.ychr.genotypes.vcf'
@@ -246,30 +265,30 @@ class TestCoreBenchmark(unittest.TestCase):
                               benchmark_label=benchmark_label)
         benchmark.run_benchmark()
 
-        # Ensure psv file was created
-        if os.path.exists(psv_file):
+        # Ensure csv file was created
+        if os.path.exists(csv_file):
             # Read file contents
-            with open(psv_file, 'r') as f:
-                psv_lines = [line.rstrip('\n') for line in f]
+            with open(csv_file, 'r') as f:
+                csv_lines = [line.rstrip('\n') for line in f]
 
-            # Check line count of psv file
-            num_lines = len(psv_lines)
+            # Check line count of csv file
+            num_lines = len(csv_lines)
             num_lines_expected = 15
-            self.assertEqual(num_lines_expected, num_lines, msg='Unexpected line count in resulting psv file.')
+            self.assertEqual(num_lines_expected, num_lines, msg='Unexpected line count in resulting csv file.')
 
-            psv_operation_names = []
+            csv_operation_names = []
 
-            for psv_line in psv_lines:
-                line_split = psv_line.split('|')
+            for csv_line in csv_lines:
+                line_split = csv_line.split(',')
                 line_cols_actual = len(line_split)
                 line_cols_expected = 4
 
                 # Ensure correct number of data columns exist for current line of data
                 self.assertEqual(line_cols_expected, line_cols_actual,
-                                 msg='Unexpected number of columns in resulting psv file')
+                                 msg='Unexpected number of columns in resulting csv file')
 
                 operation_name = line_split[2]
-                psv_operation_names.append(operation_name)
+                csv_operation_names.append(operation_name)
 
             # Ensure all aggregations were run
             test_operation_names = ['PCA: Count alleles',
@@ -283,18 +302,18 @@ class TestCoreBenchmark(unittest.TestCase):
                                     'PCA: Run randomized PCA analysis (scaler: patterson)']
 
             for test_operation_name in test_operation_names:
-                if test_operation_name not in psv_operation_names:
+                if test_operation_name not in csv_operation_names:
                     self.fail(msg='Operation \"{}\" was not run during the benchmark.'.format(test_operation_name))
         else:
-            self.fail(msg='Resulting psv file could not be found.')
+            self.fail(msg='Resulting csv file could not be found.')
 
         # Remove the test data directory from any previous unit tests
         if os.path.isdir(test_dir):
             shutil.rmtree(test_dir)
 
-        # Remove the PSV file from this unit test
-        if os.path.isfile(psv_file):
-            os.remove(psv_file)
+        # Remove the csv file from this unit test
+        if os.path.isfile(csv_file):
+            os.remove(csv_file)
 
 
 if __name__ == "__main__":

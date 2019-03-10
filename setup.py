@@ -81,6 +81,7 @@ setup(
         'scikit-allel',
         'perf',
         'toolz',
+        'influxdb',
         'mock;python_version=="2.7"',
         'pathlib;python_version=="2.7"'
     ],

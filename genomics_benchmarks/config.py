@@ -53,6 +53,9 @@ class ConfigurationRepresentation(object):
             dict_section = {name: dict(parser.items(name))}  # create dictionary representation for section
             self.__dict__.update(dict_section)  # add section dictionary to root dictionary
 
+    def __getitem__(self, item):
+        return self.__dict__[item]
+
 
 class FTPConfigurationRepresentation(object):
     """ Utility class for object representation of FTP module configuration. """
@@ -221,6 +224,7 @@ class BenchmarkConfigurationRepresentation:
     benchmark_pca = False
     genotype_array_type = GENOTYPE_ARRAY_DASK
     vcf_to_zarr_config = None
+    results_output_config = None
 
     # PCA-specific settings
     pca_number_components = 10
@@ -336,6 +340,66 @@ class BenchmarkConfigurationRepresentation:
 
             # Add the VCF to Zarr Conversion Configuration Data
             self.vcf_to_zarr_config = VCFtoZarrConfigurationRepresentation(runtime_config=runtime_config)
+
+            # Add the Output Results Configuration Data
+            self.results_output_config = OutputConfigurationRepresentation(runtime_config=runtime_config)
+
+
+class OutputConfigurationRepresentation:
+    """ Utility class for object representation of the benchmark results output module's configuration. """
+    output_csv_enabled = True
+    output_csv_delimiter = '|'
+
+    output_influxdb_enabled = False
+    output_influxdb_host = 'localhost'
+    output_influxdb_port = 8086
+    output_influxdb_username = 'root'
+    output_influxdb_password = 'root'
+    output_influxdb_database_name = 'benchmark'
+    output_influxdb_benchmark_group = ''
+    output_influxdb_device_name = ''
+
+    def __init__(self, runtime_config=None):
+        """
+        Creates an object representation of the results output module's configuration data.
+        :param runtime_config: runtime_config data to extract output configuration from
+        :type runtime_config: ConfigurationRepresentation
+        """
+        if runtime_config is not None:
+            # Check if settings exist for [output.csv] module
+            if hasattr(runtime_config, 'output.csv'):
+                # Extract relevant settings from config file
+                config_output_csv = runtime_config['output.csv']
+                if 'enabled' in config_output_csv:
+                    self.output_csv_enabled = config_str_to_bool(config_output_csv['enabled'])
+                if 'delimiter' in config_output_csv:
+                    self.output_csv_delimiter = config_output_csv['delimiter']
+
+            # Check if settings exist for [output.csv] module
+            if hasattr(runtime_config, 'output.influxdb'):
+                # Extract relevant settings from config file
+                config_output_influxdb = runtime_config['output.influxdb']
+                if 'enabled' in config_output_influxdb:
+                    self.output_influxdb_enabled = config_str_to_bool(config_output_influxdb['enabled'])
+                if 'host' in config_output_influxdb:
+                    self.output_influxdb_host = config_output_influxdb['host']
+                if 'port' in config_output_influxdb:
+                    config_output_influxdb_port_str = config_output_influxdb['port']
+                    if isint(config_output_influxdb_port_str):
+                        self.output_influxdb_port = int(config_output_influxdb_port_str)
+                    else:
+                        raise ValueError("Invalid value for port in [output.influxdb] configuration.\n"
+                                         "port must be a valid integer.")
+                if 'username' in config_output_influxdb:
+                    self.output_influxdb_username = config_output_influxdb['username']
+                if 'password' in config_output_influxdb:
+                    self.output_influxdb_password = config_output_influxdb['password']
+                if 'database_name' in config_output_influxdb:
+                    self.output_influxdb_database_name = config_output_influxdb['database_name']
+                if 'benchmark_group' in config_output_influxdb:
+                    self.output_influxdb_benchmark_group = config_output_influxdb['benchmark_group']
+                if 'device_name' in config_output_influxdb:
+                    self.output_influxdb_device_name = config_output_influxdb['device_name']
 
 
 def read_configuration(location):
