@@ -169,7 +169,14 @@ class Benchmark:
 
                 # Prepare data directory and file locations for benchmarks
                 if self.bench_conf.benchmark_data_input == "vcf":
-                    self.benchmark_zarr_dir = self.data_dirs.zarr_dir_benchmark
+                    # Ensure user didn't attempt to use concatenation along with vcf data input mode
+                    if self.bench_conf.benchmark_dataset == '*':
+                        print(
+                            '[Exec] Error: benchmark_dataset has a value of *, which cannot be used with VCF to Zarr conversion.')
+                        print('  - Please disable concatenation and specify a single data set to work with.')
+                        print(
+                            '  - Alternatively, benchmark_data_input can be set to zarr so that concatenation can be used.')
+                        exit(1)
 
                     # Convert VCF data to Zarr format as part of benchmark
                     self._benchmark_convert_to_zarr()
@@ -185,29 +192,43 @@ class Benchmark:
                     print("  - Provided data input format: {}".format(self.bench_conf.benchmark_data_input))
                     exit(1)
 
+                callsets = []
+
                 # Ensure Zarr dataset exists and can be used for upcoming benchmarks
                 benchmark_zarr_path = os.path.join(self.benchmark_zarr_dir, self.benchmark_zarr_file)
-                if (benchmark_zarr_path != "") and (os.path.isdir(benchmark_zarr_path)):
+                if self.benchmark_zarr_file == '*':
+                    # User specified concatenation mode. Get all available datasets
+                    zarr_datasets = os.listdir(self.benchmark_zarr_dir)
+                    if len(zarr_datasets) == 0:
+                        print('[Exec] Error: No zarr data sets could be found for concatenation.')
+                        exit(1)
+                    else:
+                        zarr_paths = []
+                        for zarr_dataset in zarr_datasets:
+                            zarr_paths.append(os.path.join(self.benchmark_zarr_dir, zarr_dataset))
+
+                        callsets = self._benchmark_load_zarr_datasets(zarr_paths)
+                elif (benchmark_zarr_path != "") and (os.path.isdir(benchmark_zarr_path)):
                     # Load Zarr dataset into memory
-                    callset = self._benchmark_load_zarr_dataset(benchmark_zarr_path)
-
-                    # Create genotype data from data set
-                    num_variants = self.bench_conf.benchmark_num_variants
-                    num_samples = self.bench_conf.benchmark_num_samples
-                    gt = self._benchmark_create_genotype_array(callset, num_variants, num_samples)
-
-                    if self.bench_conf.benchmark_aggregations:
-                        # Run simple aggregations benchmark
-                        self._benchmark_simple_aggregations(gt)
-
-                    if self.bench_conf.benchmark_pca:
-                        # Run PCA benchmark
-                        self._benchmark_pca(gt)
+                    callsets = self._benchmark_load_zarr_datasets([benchmark_zarr_path])
                 else:
                     # Zarr dataset doesn't exist. Print error message and exit
                     print("[Exec] Error: Zarr dataset could not be found for benchmarking.")
                     print("  - Zarr dataset location: {}".format(benchmark_zarr_path))
                     exit(1)
+
+                # Create genotype data from data set
+                num_variants = self.bench_conf.benchmark_num_variants
+                num_samples = self.bench_conf.benchmark_num_samples
+                gt = self._benchmark_create_genotype_array(callsets, num_variants, num_samples)
+
+                if self.bench_conf.benchmark_aggregations:
+                    # Run simple aggregations benchmark
+                    self._benchmark_simple_aggregations(gt)
+
+                if self.bench_conf.benchmark_pca:
+                    # Run PCA benchmark
+                    self._benchmark_pca(gt)
 
     def _benchmark_convert_to_zarr(self):
         self.benchmark_zarr_dir = self.data_dirs.zarr_dir_benchmark
@@ -232,19 +253,22 @@ class Benchmark:
             print("  - Expected file location: {}".format(input_vcf_path))
             exit(1)
 
-    def _benchmark_load_zarr_dataset(self, zarr_path):
+    def _benchmark_load_zarr_datasets(self, zarr_paths):
+        callsets = []
         self.benchmark_profiler.start_benchmark(operation_name="Load Zarr Dataset")
-        store = zarr.DirectoryStore(zarr_path)
-        callset = zarr.Group(store=store, read_only=True)
+        for zarr_path in zarr_paths:
+            store = zarr.DirectoryStore(zarr_path)
+            callset = zarr.Group(store=store, read_only=True)
+            callsets.append(callset)
         self.benchmark_profiler.end_benchmark()
-        return callset
+        return callsets
 
-    def _benchmark_create_genotype_array(self, callset, num_variants=None, num_samples=None):
+    def _benchmark_create_genotype_array(self, callsets, num_variants=None, num_samples=None):
         genotype_array_type = self.bench_conf.genotype_array_type
 
         # Create the genotype array and benchmark its execution time
         self.benchmark_profiler.start_benchmark(operation_name="Create Genotype Array")
-        gt = data_service.get_genotype_data(callset=callset, genotype_array_type=genotype_array_type)
+        gt = data_service.get_genotype_data_concat(callsets=callsets, genotype_array_type=genotype_array_type)
         self.benchmark_profiler.end_benchmark()
 
         # If the number of variants or samples were specified, limit the genotype data returned
