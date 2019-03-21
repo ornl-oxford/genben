@@ -401,6 +401,7 @@ def get_genotype_array_concat(callsets, genotype_array_type=config.GENOTYPE_ARRA
     if genotype_array_type == config.GENOTYPE_ARRAY_DASK:
         combined_gt = da.concatenate(gtz_list, axis=0)
         chunk_size = gtz_list[0].chunks  # Get chunk size of first callset
+        print('[DEBUG] Chunk Size: {}'.format(chunk_size))
         combined_gt = combined_gt.rechunk(chunk_size)  # Rechunk all data so that data can be split up across nodes
         combined_gt = allel.GenotypeDaskArray(combined_gt)
     elif genotype_array_type == config.GENOTYPE_ARRAY_CHUNKED:
