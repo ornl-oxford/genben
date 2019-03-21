@@ -394,9 +394,13 @@ def get_genotype_array_concat(callsets, genotype_array_type=config.GENOTYPE_ARRA
         return get_genotype_array(callset=callset, genotype_array_type=genotype_array_type)
 
     gt_list = []
+
+    # Get genotype data for each callset
     for callset in callsets:
         gt = get_callset_genotype_data(callset)
-        gt = da.from_array(gt, chunks=gt.chunks)
+        if genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            # Encapsulate underlying zarr array with a chunked dask array
+            gt = da.from_array(gt, chunks=gt.chunks)
         gt_list.append(gt)
 
     if genotype_array_type == config.GENOTYPE_ARRAY_DASK:
