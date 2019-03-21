@@ -393,20 +393,19 @@ def get_genotype_array_concat(callsets, genotype_array_type=config.GENOTYPE_ARRA
         callset = callsets[0]
         return get_genotype_array(callset=callset, genotype_array_type=genotype_array_type)
 
-    gtz_list = []
+    gt_list = []
     for callset in callsets:
-        gtz = get_callset_genotype_data(callset)
-        gtz_list.append(gtz)
+        gt = get_callset_genotype_data(callset)
+        gt = da.from_array(gt, chunks=gt.chunks)
+        gt_list.append(gt)
 
     if genotype_array_type == config.GENOTYPE_ARRAY_DASK:
-        combined_gt = da.concatenate(gtz_list, axis=0)
-        chunk_size = gtz_list[0].chunks  # Get chunk size of first callset
-        combined_gt = combined_gt.rechunk(chunk_size)  # Rechunk all data so that data can be split up across nodes
+        combined_gt = da.concatenate(gt_list, axis=0)
         combined_gt = allel.GenotypeDaskArray(combined_gt)
     elif genotype_array_type == config.GENOTYPE_ARRAY_CHUNKED:
-        combined_gt = allel.GenotypeChunkedArray(np.concatenate(gtz_list, axis=0))
+        combined_gt = allel.GenotypeChunkedArray(np.concatenate(gt_list, axis=0))
     elif genotype_array_type == config.GENOTYPE_ARRAY_NORMAL:
-        combined_gt = allel.GenotypeArray(np.concatenate(gtz_list, axis=0))
+        combined_gt = allel.GenotypeArray(np.concatenate(gt_list, axis=0))
     else:
         raise ValueError('Error: Invalid option specified for genotype_array_type.')
 
