@@ -268,7 +268,7 @@ class Benchmark:
 
         # Create the genotype array and benchmark its execution time
         self.benchmark_profiler.start_benchmark(operation_name="Create Genotype Array")
-        gt = data_service.get_genotype_data_concat(callsets=callsets, genotype_array_type=genotype_array_type)
+        gt = data_service.get_genotype_array_concat(callsets=callsets, genotype_array_type=genotype_array_type)
         self.benchmark_profiler.end_benchmark()
 
         # If the number of variants or samples were specified, limit the genotype data returned
