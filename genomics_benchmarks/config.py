@@ -196,6 +196,36 @@ class VCFtoZarrConfigurationRepresentation:
                                         "blosc_shuffle_mode could not be converted to integer.")
 
 
+class DaskSchedulerConfigurationRepresentation:
+    """ Utility class for object representation of the Dask scheduler module configuration. """
+    enabled = False  # Specifies whether connection to a Dask scheduler should be performed or not
+    scheduler_address = '127.0.0.1'
+    scheduler_port = 8786
+
+    def __init__(self, runtime_config=None):
+        """
+        Creates an object representation of Dask scheduler module configuration data.
+        :param runtime_config: runtime_config data to extract Dask scheduler configuration from
+        :type runtime_config: ConfigurationRepresentation
+        """
+        if runtime_config is not None:
+            # Check if [vcf_to_zarr] section exists in config
+            if hasattr(runtime_config, "dask"):
+                # Extract relevant settings from config file
+                config_dask = runtime_config['dask']
+                if "enabled" in config_dask:
+                    self.enabled = config_str_to_bool(config_dask["enabled"])
+                if 'scheduler_address' in config_dask:
+                    self.scheduler_address = config_dask['scheduler_address']
+                if "scheduler_port" in config_dask:
+                    scheduler_port_str = config_dask["scheduler_port"]
+                    if isint(scheduler_port_str) and int(scheduler_port_str) > 0:
+                        self.scheduler_port = int(scheduler_port_str)
+                    else:
+                        raise ValueError("Invalid value provided for scheduler port in configuration.\n"
+                                         "Expected: positive integer value")
+
+
 benchmark_data_input_types = ["vcf", "zarr"]
 
 PCA_DATA_SCALER_STANDARD = 0

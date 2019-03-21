@@ -75,6 +75,17 @@ blosc_compression_level = 1
 #   - AUTOSHUFFLE:  -1
 blosc_shuffle_mode = -1
 
+
+[dask]
+
+# Enables/disables connection to a Dask distributed scheduler.
+enabled = False
+
+# The IP address and port of the scheduler to connect to.
+scheduler_address = 127.0.0.1
+scheduler_port = 8786
+
+
 [benchmark]
 
 # Specifies how many times the benchmark tool should run
