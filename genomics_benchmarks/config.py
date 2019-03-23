@@ -334,9 +334,12 @@ class BenchmarkConfigurationRepresentation:
                     pca_subset_size_str = runtime_config.benchmark["pca_subset_size"]
                     if isint(pca_subset_size_str) and (int(pca_subset_size_str) > 0):
                         self.pca_subset_size = int(pca_subset_size_str)
+                    elif isint(pca_subset_size_str) and (int(pca_subset_size_str) == -1):
+                        self.pca_subset_size = int(pca_subset_size_str)
                     else:
                         raise ValueError("Invalid value for pca_subset_size in configuration.\n"
-                                         "pca_subset_size must be a valid integer greater than 0.")
+                                         "pca_subset_size must be a valid integer greater than 0.\n"
+                                         "Additionally, a value of -1 can be used to include all samples.")
                 if "pca_ld_enabled" in runtime_config.benchmark:
                     self.pca_ld_enabled = config_str_to_bool(runtime_config.benchmark["pca_ld_enabled"])
                 if "pca_ld_pruning_number_iterations" in runtime_config.benchmark:

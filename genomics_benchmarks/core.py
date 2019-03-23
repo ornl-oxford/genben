@@ -7,6 +7,7 @@ import zarr
 import datetime
 import time  # for benchmark timer
 import numpy as np
+import dask.array as da
 import os
 import pandas as pd
 from collections import OrderedDict
@@ -88,6 +89,7 @@ class BenchmarkProfiler:
 
     def start_benchmark(self, operation_name):
         if not self.benchmark_running:
+            print('Running benchmark: {}'.format(operation_name))
             self.results.operation_name = operation_name
 
             self.benchmark_running = True
@@ -98,6 +100,8 @@ class BenchmarkProfiler:
     def end_benchmark(self):
         if self.benchmark_running:
             end_time = datetime.datetime.utcnow()
+
+            print('  - Done.')
 
             # Calculate the execution time from start and end times
             self.results.exec_time = (end_time - self.results.start_time).total_seconds()
@@ -333,12 +337,18 @@ class Benchmark:
 
         # Count number of multiallelic SNPs
         self.benchmark_profiler.start_benchmark('PCA: Count multiallelic SNPs')
-        num_multiallelic_snps = np.count_nonzero(ac.max_allele() > 1)
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            num_multiallelic_snps = da.count_nonzero(ac.max_allele() > 1)
+        else:
+            num_multiallelic_snps = np.count_nonzero(ac.max_allele() > 1)
         self.benchmark_profiler.end_benchmark()
 
         # Count number of biallelic singletons
         self.benchmark_profiler.start_benchmark('PCA: Count biallelic singletons')
-        num_biallelic_singletons = np.count_nonzero((ac.max_allele() == 1) & ac.is_singleton(1))
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            num_biallelic_singletons = da.count_nonzero((ac.max_allele() == 1) & ac.is_singleton(1))
+        else:
+            num_biallelic_singletons = np.count_nonzero((ac.max_allele() == 1) & ac.is_singleton(1))
         self.benchmark_profiler.end_benchmark()
 
         # Apply filtering to remove singletons and multiallelic SNPs
@@ -359,16 +369,21 @@ class Benchmark:
         self.benchmark_profiler.end_benchmark()
 
         # Randomly choose subset of SNPs
-        n = min(gn.shape[0], self.bench_conf.pca_subset_size)
-        vidx = np.random.choice(gn.shape[0], n, replace=False)
-        vidx.sort()
-        if self.bench_conf.genotype_array_type in [config.GENOTYPE_ARRAY_NORMAL, config.GENOTYPE_ARRAY_CHUNKED]:
-            gnr = gn.take(vidx, axis=0)
-        elif self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
-            gnr = gn[vidx]  # Use indexing workaround since Dask Array's take() method is not working properly
+        if self.bench_conf.pca_subset_size == -1:
+            print('[Exec][PCA] Including all ({}) variants for PCA.'.format(gn.shape[0]))
+            gnr = gn
         else:
-            print('[Exec][PCA] Error: Unspecified genotype array type specified.')
-            exit(1)
+            n = min(gn.shape[0], self.bench_conf.pca_subset_size)
+            print('[Exec][PCA] Including {} random variants for PCA.'.format(n))
+            vidx = np.random.choice(gn.shape[0], n, replace=False)
+            vidx.sort()
+            if self.bench_conf.genotype_array_type in [config.GENOTYPE_ARRAY_NORMAL, config.GENOTYPE_ARRAY_CHUNKED]:
+                gnr = gn.take(vidx, axis=0)
+            elif self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+                gnr = gn[vidx]  # Use indexing workaround since Dask Array's take() method is not working properly
+            else:
+                print('[Exec][PCA] Error: Unspecified genotype array type specified.')
+                exit(1)
 
         if self.bench_conf.pca_ld_enabled:
             if self.bench_conf.genotype_array_type != config.GENOTYPE_ARRAY_DASK:
