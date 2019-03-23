@@ -21,6 +21,7 @@ import allel.io.vcf_read
 import sys
 import functools
 import numpy as np
+import dask.array as da
 import zarr
 import numcodecs
 from numcodecs import Blosc
@@ -367,7 +368,7 @@ def convert_to_zarr(input_vcf_path, output_zarr_path, conversion_config, benchma
             benchmark_profiler.end_benchmark()
 
 
-def get_genotype_data(callset, genotype_array_type=config.GENOTYPE_ARRAY_DASK):
+def get_callset_genotype_data(callset):
     genotype_ref_name = ''
 
     # Ensure 'calldata' is within the callset
@@ -383,6 +384,40 @@ def get_genotype_data(callset, genotype_array_type=config.GENOTYPE_ARRAY_DASK):
         return None
 
     gtz = callset['calldata'][genotype_ref_name]
+    return gtz
+
+
+def get_genotype_array_concat(callsets, genotype_array_type=config.GENOTYPE_ARRAY_DASK):
+    if len(callsets) == 1:
+        # Only one callset provided. No need for concatenation
+        callset = callsets[0]
+        return get_genotype_array(callset=callset, genotype_array_type=genotype_array_type)
+
+    gt_list = []
+
+    # Get genotype data for each callset
+    for callset in callsets:
+        gt = get_callset_genotype_data(callset)
+        if genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            # Encapsulate underlying zarr array with a chunked dask array
+            gt = da.from_array(gt, chunks=gt.chunks)
+        gt_list.append(gt)
+
+    if genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+        combined_gt = da.concatenate(gt_list, axis=0)
+        combined_gt = allel.GenotypeDaskArray(combined_gt)
+    elif genotype_array_type == config.GENOTYPE_ARRAY_CHUNKED:
+        combined_gt = allel.GenotypeChunkedArray(np.concatenate(gt_list, axis=0))
+    elif genotype_array_type == config.GENOTYPE_ARRAY_NORMAL:
+        combined_gt = allel.GenotypeArray(np.concatenate(gt_list, axis=0))
+    else:
+        raise ValueError('Error: Invalid option specified for genotype_array_type.')
+
+    return combined_gt
+
+
+def get_genotype_array(callset, genotype_array_type=config.GENOTYPE_ARRAY_DASK):
+    gtz = get_callset_genotype_data(callset)
 
     if genotype_array_type == config.GENOTYPE_ARRAY_NORMAL:
         return allel.GenotypeArray(gtz)

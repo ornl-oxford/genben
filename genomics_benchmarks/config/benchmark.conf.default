@@ -103,6 +103,9 @@ benchmark_number_runs = 5
 benchmark_data_input = vcf
 
 # Specifies which dataset to use for the benchmarking process.
+# If a value * is specified, the benchmark will concatenate all data in the ./data/zarr/ directory.
+#   - Note: In order to use concatenation, all data sets must have the same number of samples to align properly.
+#   - Note: Concatenation (*) can only be used when benchmark_data_input is set to zarr.
 benchmark_dataset =
 
 # Specifies the number of variants to include from the dataset input for benchmarking.
