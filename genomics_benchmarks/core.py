@@ -439,13 +439,17 @@ class Benchmark:
         # Run conventional PCA analysis
         self.benchmark_profiler.start_benchmark(
             'PCA: Run conventional PCA analysis (scaler: {})'.format(scaler if scaler is not None else 'none'))
-        allel.pca(gnu, n_components=pca_num_components, scaler=scaler)
+        coords, model = allel.pca(gnu, n_components=pca_num_components, scaler=scaler)
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            coords.compute()
         self.benchmark_profiler.end_benchmark()
 
         # Run randomized PCA analysis
         self.benchmark_profiler.start_benchmark(
             'PCA: Run randomized PCA analysis (scaler: {})'.format(scaler if scaler is not None else 'none'))
-        allel.randomized_pca(gnu, n_components=pca_num_components, scaler=scaler)
+        coords, model = allel.randomized_pca(gnu, n_components=pca_num_components, scaler=scaler)
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            coords.compute()
         self.benchmark_profiler.end_benchmark()
 
     @staticmethod
