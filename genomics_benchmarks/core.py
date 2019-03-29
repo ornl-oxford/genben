@@ -374,7 +374,7 @@ class Benchmark:
         # Count number of multiallelic SNPs
         self.benchmark_profiler.start_benchmark('PCA: Count multiallelic SNPs')
         if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
-            num_multiallelic_snps = da.count_nonzero(ac.max_allele() > 1)
+            num_multiallelic_snps = da.count_nonzero(ac.max_allele() > 1).compute()
         else:
             num_multiallelic_snps = np.count_nonzero(ac.max_allele() > 1)
         self.benchmark_profiler.end_benchmark()
@@ -382,7 +382,7 @@ class Benchmark:
         # Count number of biallelic singletons
         self.benchmark_profiler.start_benchmark('PCA: Count biallelic singletons')
         if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
-            num_biallelic_singletons = da.count_nonzero((ac.max_allele() == 1) & ac.is_singleton(1))
+            num_biallelic_singletons = da.count_nonzero((ac.max_allele() == 1) & ac.is_singleton(1)).compute()
         else:
             num_biallelic_singletons = np.count_nonzero((ac.max_allele() == 1) & ac.is_singleton(1))
         self.benchmark_profiler.end_benchmark()
