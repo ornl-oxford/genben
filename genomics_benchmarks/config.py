@@ -253,6 +253,8 @@ class BenchmarkConfigurationRepresentation:
     benchmark_aggregations = False
     benchmark_pca = False
     genotype_array_type = GENOTYPE_ARRAY_DASK
+    dask_genotype_array_chunk_variants = -1
+    dask_genotype_array_chunk_samples = -1
     vcf_to_zarr_config = None
     results_output_config = None
 
@@ -316,6 +318,34 @@ class BenchmarkConfigurationRepresentation:
                     else:
                         raise ValueError("Invalid value for genotype_array_type in configuration.\n"
                                          "genotype_array_type must be a valid integer between 0 and 2")
+                if "dask_genotype_array_chunk_variants" in runtime_config.benchmark:
+                    dask_genotype_array_chunk_variants_str = runtime_config.benchmark["dask_genotype_array_chunk_variants"]
+                    if isint(dask_genotype_array_chunk_variants_str):
+                        if int(dask_genotype_array_chunk_variants_str) == -1 or int(
+                                dask_genotype_array_chunk_variants_str) > 0:
+                            self.dask_genotype_array_chunk_variants = int(dask_genotype_array_chunk_variants_str)
+                        else:
+                            raise ValueError("Invalid value for dask_genotype_array_chunk_variants in configuration.\n"
+                                             "dask_genotype_array_chunk_variants must be a valid integer equal to\n"
+                                             "-1 or an integer greater than 0.")
+                    else:
+                        raise TypeError("Invalid type for dask_genotype_array_chunk_variants in configuration.\n"
+                                        "dask_genotype_array_chunk_variants must be a valid integer equal to\n"
+                                        "-1 or an integer greater than 0.")
+                if "dask_genotype_array_chunk_samples" in runtime_config.benchmark:
+                    dask_genotype_array_chunk_samples_str = runtime_config.benchmark["dask_genotype_array_chunk_samples"]
+                    if isint(dask_genotype_array_chunk_samples_str):
+                        if int(dask_genotype_array_chunk_samples_str) == -1 or int(
+                                dask_genotype_array_chunk_samples_str) > 0:
+                            self.dask_genotype_array_chunk_samples = int(dask_genotype_array_chunk_samples_str)
+                        else:
+                            raise ValueError("Invalid value for dask_genotype_array_chunk_samples in configuration.\n"
+                                             "dask_genotype_array_chunk_samples must be a valid integer equal to\n"
+                                             "-1 or an integer greater than 0.")
+                    else:
+                        raise TypeError("Invalid type for dask_genotype_array_chunk_samples in configuration.\n"
+                                        "dask_genotype_array_chunk_samples must be a valid integer equal to\n"
+                                        "-1 or an integer greater than 0.")
                 if "pca_number_components" in runtime_config.benchmark:
                     pca_number_components_str = runtime_config.benchmark["pca_number_components"]
                     if isint(pca_number_components_str) and (int(pca_number_components_str) > 0):

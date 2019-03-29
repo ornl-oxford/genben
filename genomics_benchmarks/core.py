@@ -300,6 +300,18 @@ class Benchmark:
         else:
             print('[Exec][Create Genotype Array] Including all samples ({}).'.format(gt.n_samples))
 
+        # Rechunk the genotype data if specified
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            new_chunk_length = self.bench_conf.dask_genotype_array_chunk_variants
+            new_chunk_width = self.bench_conf.dask_genotype_array_chunk_samples
+            if new_chunk_length != -1 or new_chunk_width != -1:
+                # Rechunk the genotype array
+                new_chunk_size = (new_chunk_length if new_chunk_length != -1 else gt.values.chunksize[0],
+                                  new_chunk_width if new_chunk_width != -1 else gt.values.chunksize[1],
+                                  gt.ploidy)
+                print('[Exec][Create Genotype Array] Rechunking data to size {}.'.format(new_chunk_size))
+                gt = gt.rechunk(new_chunk_size)
+
         return gt
 
     def _benchmark_simple_aggregations(self, gt):
@@ -436,18 +448,30 @@ class Benchmark:
         pca_num_components = self.bench_conf.pca_number_components
         scaler = self.bench_conf.pca_data_scaler
 
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            # Rechunk Dask array to work with Dask's svd function (single chunk for transposed column)
+            gnu_pca_conv = gnu.rechunk({0: -1, 1: gt.values.chunksize[1]})
+        else:
+            gnu_pca_conv = gnu
+
         # Run conventional PCA analysis
         self.benchmark_profiler.start_benchmark(
             'PCA: Run conventional PCA analysis (scaler: {})'.format(scaler if scaler is not None else 'none'))
-        coords, model = allel.pca(gnu, n_components=pca_num_components, scaler=scaler)
+        coords, model = allel.pca(gnu_pca_conv, n_components=pca_num_components, scaler=scaler)
         if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
             coords.compute()
         self.benchmark_profiler.end_benchmark()
 
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            # Rechunk Dask array to match original genotype chunk size
+            gnu_pca_rand = gnu.rechunk((gt.values.chunksize[0], gt.values.chunksize[1]))
+        else:
+            gnu_pca_rand = gnu
+
         # Run randomized PCA analysis
         self.benchmark_profiler.start_benchmark(
             'PCA: Run randomized PCA analysis (scaler: {})'.format(scaler if scaler is not None else 'none'))
-        coords, model = allel.randomized_pca(gnu, n_components=pca_num_components, scaler=scaler)
+        coords, model = allel.randomized_pca(gnu_pca_rand, n_components=pca_num_components, scaler=scaler)
         if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
             coords.compute()
         self.benchmark_profiler.end_benchmark()

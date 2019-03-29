@@ -131,6 +131,14 @@ benchmark_pca = True
 #   - Chunked:  2
 genotype_array_type = 1
 
+# [Dask] Specifies the chunk length and width to use when creating a Dask genotype array.
+# Chunk variants corresponds to length, and chunk samples corresponds to width.
+# These parameters are only used if genotype_array_type is set to use Dask array.
+# If a value of -1 is passed, it will inherit the underlying Zarr dataset chunk size.
+# If a value of -1 is passed for both parameters, no re-chunking will occur.
+dask_genotype_array_chunk_variants = -1
+dask_genotype_array_chunk_samples = -1
+
 # [PCA Benchmark] Specifies the number of principal components to keep when performing PCA analysis.
 pca_number_components = 10
 
