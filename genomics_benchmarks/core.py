@@ -368,7 +368,7 @@ class Benchmark:
     def _benchmark_pca(self, gt):
         # Count alleles at each variant
         self.benchmark_profiler.start_benchmark('PCA: Count alleles')
-        ac = gt.count_alleles()[:]
+        ac = gt.count_alleles()
         self.benchmark_profiler.end_benchmark()
 
         # Count number of multiallelic SNPs
@@ -378,6 +378,7 @@ class Benchmark:
         else:
             num_multiallelic_snps = np.count_nonzero(ac.max_allele() > 1)
         self.benchmark_profiler.end_benchmark()
+        del num_multiallelic_snps
 
         # Count number of biallelic singletons
         self.benchmark_profiler.start_benchmark('PCA: Count biallelic singletons')
@@ -386,6 +387,7 @@ class Benchmark:
         else:
             num_biallelic_singletons = np.count_nonzero((ac.max_allele() == 1) & ac.is_singleton(1))
         self.benchmark_profiler.end_benchmark()
+        del num_biallelic_singletons
 
         # Apply filtering to remove singletons and multiallelic SNPs
         flt = (ac.max_allele() == 1) & (ac[:, :2].min(axis=1) > 1)
@@ -398,11 +400,13 @@ class Benchmark:
             print('[Exec][PCA] Cannot remove singletons and multiallelic SNPs as no data would remain. Skipping...')
             gf = gt
         self.benchmark_profiler.end_benchmark()
+        del ac, flt, flt_count
 
         # Transform genotype data into 2-dim matrix
         self.benchmark_profiler.start_benchmark('PCA: Transform genotype data for PCA')
         gn = gf.to_n_alt()
         self.benchmark_profiler.end_benchmark()
+        del gf
 
         # Randomly choose subset of SNPs
         if self.bench_conf.pca_subset_size == -1:
@@ -420,6 +424,7 @@ class Benchmark:
             else:
                 print('[Exec][PCA] Error: Unspecified genotype array type specified.')
                 exit(1)
+            del vidx
 
         if self.bench_conf.pca_ld_enabled:
             if self.bench_conf.genotype_array_type != config.GENOTYPE_ARRAY_DASK:
@@ -439,11 +444,6 @@ class Benchmark:
             print('[Exec][PCA] LD pruning disabled. Skipping this operation.')
             gnu = gnr
 
-        # If data is chunked, move to memory for PCA
-        self.benchmark_profiler.start_benchmark('PCA: Move data set to memory')
-        gnu = gnu[:]
-        self.benchmark_profiler.end_benchmark()
-
         # Run PCA analysis
         pca_num_components = self.bench_conf.pca_number_components
         scaler = self.bench_conf.pca_data_scaler
@@ -461,6 +461,7 @@ class Benchmark:
         if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
             coords.compute()
         self.benchmark_profiler.end_benchmark()
+        del gnu_pca_conv, coords, model
 
         if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
             # Rechunk Dask array to match original genotype chunk size
@@ -475,6 +476,7 @@ class Benchmark:
         if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
             coords.compute()
         self.benchmark_profiler.end_benchmark()
+        del gnu_pca_rand, coords, model
 
     @staticmethod
     def _pca_ld_prune(gn, size, step, threshold=.1, n_iter=1):
