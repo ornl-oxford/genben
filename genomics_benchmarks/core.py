@@ -50,7 +50,6 @@ class BenchmarkResultsData:
                                        username=username,
                                        password=password,
                                        database=db_name)
-        influx_client.create_database(dbname=db_name)
 
         json_body = [{
             'measurement': 'benchmark',
