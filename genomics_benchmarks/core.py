@@ -394,7 +394,10 @@ class Benchmark:
         flt_count = np.count_nonzero(flt)
         self.benchmark_profiler.start_benchmark('PCA: Remove singletons and multiallelic SNPs')
         if flt_count > 0:
-            gf = gt.compress(flt, axis=0)
+            if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+                gf = gt.take(np.flatnonzero(flt), axis=0)
+            else:
+                gf = gt.compress(condition=flt, axis=0)
         else:
             # Don't apply filtering
             print('[Exec][PCA] Cannot remove singletons and multiallelic SNPs as no data would remain. Skipping...')
