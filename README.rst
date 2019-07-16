@@ -3,7 +3,7 @@ genben
 
 Benchmarking of systems for storage and compute over large-scale genomic data using the `scikit-allel <https://scikit-allel.readthedocs.io/en/latest/>`_ library.
 
-.. image:: https://api.travis-ci.com/ornl-oxford/genomics-benchmarks.svg?branch=master
+.. image:: https://api.travis-ci.com/ornl-oxford/genben.svg?branch=master
    :target: https://travis-ci.com/ornl-oxford/genben
 
 Source Code: https://github.com/ornl-oxford/genben
@@ -11,15 +11,15 @@ Source Code: https://github.com/ornl-oxford/genben
 Setup and Execution
 ###################
 
-Download genomics-benchmarks:
+Download genben:
     ``git clone https://github.com/ornl-oxford/genben.git``
 
-Install genomics-benchmarks:
+Install genben:
     ``cd genben``
 
     ``pip install -e .``
 
-Run genomics-benchmarks:
+Run genben:
   1. Generate the initial, default configuration file:
       ``$ genben config --output_config FILEPATH [-f]``
 
