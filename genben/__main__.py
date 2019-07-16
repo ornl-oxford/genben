@@ -1,0 +1,4 @@
+import genben
+
+if __name__ == '__main__':
+    genben.main()

@@ -11,7 +11,7 @@ import dask.array as da
 import os
 import pandas as pd
 from collections import OrderedDict
-from genomics_benchmarks import config, data_service
+from genben import config, data_service
 from influxdb import InfluxDBClient
 
 

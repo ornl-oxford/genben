@@ -12,7 +12,7 @@ except ImportError:
     from mock import patch
 import sys
 import os
-from genomics_benchmarks import cli, config
+from genben import cli, config
 
 
 class TestConfigurationFile(unittest.TestCase):
@@ -28,7 +28,7 @@ class TestConfigurationFile(unittest.TestCase):
 
     def test_generate_default_config(self):
         location = "./test_generate_default_config.conf"
-        location_expected = "./genomics_benchmarks/config/benchmark.conf.default"
+        location_expected = "./genben/config/benchmark.conf.default"
 
         # Remove any existing configuration files from previous unit testing (prevent false positive)
         if os.path.isfile(location):
@@ -59,7 +59,7 @@ class TestConfigurationFile(unittest.TestCase):
 
     def test_generate_default_config_no_overwrite(self):
         location = "./test_generate_default_config_no_overwrite.conf"
-        location_default = "./genomics_benchmarks/config/benchmark.conf.default"
+        location_default = "./genben/config/benchmark.conf.default"
         test_string = "Test data"
 
         # Remove any existing configuration files from previous unit testing (prevent false positive)
@@ -96,7 +96,7 @@ class TestConfigurationFile(unittest.TestCase):
 
     def test_generate_default_config_force(self):
         location = "./test_generate_default_config_force.conf"
-        location_expected = "./genomics_benchmarks/config/benchmark.conf.default"
+        location_expected = "./genben/config/benchmark.conf.default"
         test_string = "Test data"
 
         # Remove any existing configuration files from previous unit testing (prevent false positive)

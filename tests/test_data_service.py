@@ -9,7 +9,7 @@ import zarr
 import numpy as np
 from ftplib import error_temp
 
-from genomics_benchmarks import data_service, config
+from genben import data_service, config
 
 
 class TestDataServices(unittest.TestCase):
