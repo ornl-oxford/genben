@@ -82,7 +82,7 @@ setup(
         'zarr',
         'scikit-learn',
         'scikit-allel',
-        'perf',
+        'pyperf',
         'toolz',
         'influxdb',
         'mock;python_version=="2.7"',
