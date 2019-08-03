@@ -9,7 +9,7 @@ import csv  # for writing results
 import logging
 import sys
 import shutil
-from genomics_benchmarks import core, config, data_service, dask_utils
+from genben import core, config, data_service, dask_utils
 
 
 def get_cli_arguments():

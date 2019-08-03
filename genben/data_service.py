@@ -25,7 +25,7 @@ import dask.array as da
 import zarr
 import numcodecs
 from numcodecs import Blosc
-from genomics_benchmarks import config
+from genben import config
 
 import gzip
 import shutil

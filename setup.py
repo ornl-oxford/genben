@@ -58,17 +58,17 @@ with open('README.rst', 'r') as f:
     long_description = f.read()
 
 setup(
-    name='genomics-benchmarks',
+    name='genben',
     version=VERSION,
     description=DESCRIPTION,
     long_description=long_description,
-    url='https://github.com/ornl-oxford/genomics-benchmarks/',
+    url='https://github.com/ornl-oxford/genben/',
     license='MIT',
     author='ornl-oxford',
     packages=find_packages(),
     include_package_data=True,
     package_data={
-        'genomics_benchmarks': ['config/benchmark.conf.default']
+        'genben': ['config/benchmark.conf.default']
     },
     classifiers=CLASSIFIERS,
     install_requires=[
@@ -90,7 +90,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'genomics-benchmarks = genomics_benchmarks:main'
+            'genben = genben:main'
         ]
     }
 )

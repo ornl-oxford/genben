@@ -10,7 +10,7 @@ try:
     from unittest.mock import patch
 except ImportError:
     from mock import patch
-from genomics_benchmarks import cli
+from genben import cli
 
 
 class TestCommandLineInterface(unittest.TestCase):

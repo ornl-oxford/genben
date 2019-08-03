@@ -1,6 +1,6 @@
 import unittest
-from genomics_benchmarks.core import *
-from genomics_benchmarks.config import \
+from genben.core import *
+from genben.config import \
     BenchmarkConfigurationRepresentation, \
     VCFtoZarrConfigurationRepresentation, \
     OutputConfigurationRepresentation, \
