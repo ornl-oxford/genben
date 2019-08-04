@@ -273,7 +273,7 @@ class TestCoreBenchmark(unittest.TestCase):
 
             # Check line count of csv file
             num_lines = len(csv_lines)
-            num_lines_expected = 15
+            num_lines_expected = 14
             self.assertEqual(num_lines_expected, num_lines, msg='Unexpected line count in resulting csv file.')
 
             csv_operation_names = []
@@ -297,7 +297,6 @@ class TestCoreBenchmark(unittest.TestCase):
                                     'PCA: Remove singletons and multiallelic SNPs',
                                     'PCA: Transform genotype data for PCA',
                                     'PCA: Apply LD pruning',
-                                    'PCA: Move data set to memory',
                                     'PCA: Run conventional PCA analysis (scaler: patterson)',
                                     'PCA: Run randomized PCA analysis (scaler: patterson)']
 
