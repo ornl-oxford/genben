@@ -50,7 +50,6 @@ class BenchmarkResultsData:
                                        username=username,
                                        password=password,
                                        database=db_name)
-        influx_client.create_database(dbname=db_name)
 
         json_body = [{
             'measurement': 'benchmark',
@@ -300,6 +299,18 @@ class Benchmark:
         else:
             print('[Exec][Create Genotype Array] Including all samples ({}).'.format(gt.n_samples))
 
+        # Rechunk the genotype data if specified
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            new_chunk_length = self.bench_conf.dask_genotype_array_chunk_variants
+            new_chunk_width = self.bench_conf.dask_genotype_array_chunk_samples
+            if new_chunk_length != -1 or new_chunk_width != -1:
+                # Rechunk the genotype array
+                new_chunk_size = (new_chunk_length if new_chunk_length != -1 else gt.values.chunksize[0],
+                                  new_chunk_width if new_chunk_width != -1 else gt.values.chunksize[1],
+                                  gt.ploidy)
+                print('[Exec][Create Genotype Array] Rechunking data to size {}.'.format(new_chunk_size))
+                gt = gt.rechunk(new_chunk_size)
+
         return gt
 
     def _benchmark_simple_aggregations(self, gt):
@@ -356,41 +367,48 @@ class Benchmark:
     def _benchmark_pca(self, gt):
         # Count alleles at each variant
         self.benchmark_profiler.start_benchmark('PCA: Count alleles')
-        ac = gt.count_alleles()[:]
+        ac = gt.count_alleles()
         self.benchmark_profiler.end_benchmark()
 
         # Count number of multiallelic SNPs
         self.benchmark_profiler.start_benchmark('PCA: Count multiallelic SNPs')
         if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
-            num_multiallelic_snps = da.count_nonzero(ac.max_allele() > 1)
+            num_multiallelic_snps = da.count_nonzero(ac.max_allele() > 1).compute()
         else:
             num_multiallelic_snps = np.count_nonzero(ac.max_allele() > 1)
         self.benchmark_profiler.end_benchmark()
+        del num_multiallelic_snps
 
         # Count number of biallelic singletons
         self.benchmark_profiler.start_benchmark('PCA: Count biallelic singletons')
         if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
-            num_biallelic_singletons = da.count_nonzero((ac.max_allele() == 1) & ac.is_singleton(1))
+            num_biallelic_singletons = da.count_nonzero((ac.max_allele() == 1) & ac.is_singleton(1)).compute()
         else:
             num_biallelic_singletons = np.count_nonzero((ac.max_allele() == 1) & ac.is_singleton(1))
         self.benchmark_profiler.end_benchmark()
+        del num_biallelic_singletons
 
         # Apply filtering to remove singletons and multiallelic SNPs
         flt = (ac.max_allele() == 1) & (ac[:, :2].min(axis=1) > 1)
         flt_count = np.count_nonzero(flt)
         self.benchmark_profiler.start_benchmark('PCA: Remove singletons and multiallelic SNPs')
         if flt_count > 0:
-            gf = gt.compress(flt, axis=0)
+            if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+                gf = gt.take(np.flatnonzero(flt), axis=0)
+            else:
+                gf = gt.compress(condition=flt, axis=0)
         else:
             # Don't apply filtering
             print('[Exec][PCA] Cannot remove singletons and multiallelic SNPs as no data would remain. Skipping...')
             gf = gt
         self.benchmark_profiler.end_benchmark()
+        del ac, flt, flt_count
 
         # Transform genotype data into 2-dim matrix
         self.benchmark_profiler.start_benchmark('PCA: Transform genotype data for PCA')
         gn = gf.to_n_alt()
         self.benchmark_profiler.end_benchmark()
+        del gf
 
         # Randomly choose subset of SNPs
         if self.bench_conf.pca_subset_size == -1:
@@ -408,6 +426,7 @@ class Benchmark:
             else:
                 print('[Exec][PCA] Error: Unspecified genotype array type specified.')
                 exit(1)
+            del vidx
 
         if self.bench_conf.pca_ld_enabled:
             if self.bench_conf.genotype_array_type != config.GENOTYPE_ARRAY_DASK:
@@ -427,26 +446,39 @@ class Benchmark:
             print('[Exec][PCA] LD pruning disabled. Skipping this operation.')
             gnu = gnr
 
-        # If data is chunked, move to memory for PCA
-        self.benchmark_profiler.start_benchmark('PCA: Move data set to memory')
-        gnu = gnu[:]
-        self.benchmark_profiler.end_benchmark()
-
         # Run PCA analysis
         pca_num_components = self.bench_conf.pca_number_components
         scaler = self.bench_conf.pca_data_scaler
 
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            # Rechunk Dask array to work with Dask's svd function (single chunk for transposed column)
+            gnu_pca_conv = gnu.rechunk({0: -1, 1: gt.values.chunksize[1]})
+        else:
+            gnu_pca_conv = gnu
+
         # Run conventional PCA analysis
         self.benchmark_profiler.start_benchmark(
             'PCA: Run conventional PCA analysis (scaler: {})'.format(scaler if scaler is not None else 'none'))
-        allel.pca(gnu, n_components=pca_num_components, scaler=scaler)
+        coords, model = allel.pca(gnu_pca_conv, n_components=pca_num_components, scaler=scaler)
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            coords.compute()
         self.benchmark_profiler.end_benchmark()
+        del gnu_pca_conv, coords, model
+
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            # Rechunk Dask array to match original genotype chunk size
+            gnu_pca_rand = gnu.rechunk((gt.values.chunksize[0], gt.values.chunksize[1]))
+        else:
+            gnu_pca_rand = gnu
 
         # Run randomized PCA analysis
         self.benchmark_profiler.start_benchmark(
             'PCA: Run randomized PCA analysis (scaler: {})'.format(scaler if scaler is not None else 'none'))
-        allel.randomized_pca(gnu, n_components=pca_num_components, scaler=scaler)
+        coords, model = allel.randomized_pca(gnu_pca_rand, n_components=pca_num_components, scaler=scaler)
+        if self.bench_conf.genotype_array_type == config.GENOTYPE_ARRAY_DASK:
+            coords.compute()
         self.benchmark_profiler.end_benchmark()
+        del gnu_pca_rand, coords, model
 
     @staticmethod
     def _pca_ld_prune(gn, size, step, threshold=.1, n_iter=1):
